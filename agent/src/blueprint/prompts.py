@@ -168,7 +168,10 @@ def interviewer_prompt(
         f"Stage: {stage}\n"
         f"Step: {current_step} of 5 — {STEP_NAMES[current_step]}\n"
         "Record every fact the user settles with your tools; the design record below is what "
-        "has been recorded so far, each item labelled with its ID.",
+        "has been recorded so far, each item labelled with its ID.\n"
+        "When the problem matches one of the reference blueprints in the course context "
+        "(media streaming, reservations, real-time messaging), name the pattern and its key "
+        "technique as something to consider, never as the answer.",
         "## Design record\n" + design_summary(design),
     ]
     if edit_note:

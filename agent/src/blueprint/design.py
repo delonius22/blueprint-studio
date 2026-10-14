@@ -15,10 +15,12 @@ from pydantic import BaseModel, Field, ValidationError, create_model
 
 from blueprint.domain import (
     DESIGN_PREFIXES,
+    Component,
     Design,
     Endpoint,
     Entity,
     Estimate,
+    Flow,
     Model,
     NfrTarget,
     Note,
@@ -199,6 +201,21 @@ LIST_TOOLS: dict[str, ListTool] = {
                 "workload facts (read/write ratio, consistency need, latency or throughput), "
                 "then call decide_storage_choice."
             ),
+        ),
+        _list_tool(
+            "upsert_component",
+            "components",
+            Component,
+            "Record an architecture component: its name, kind (client, gateway, load_balancer, "
+            "service, cache, queue, database, object_store, search, cdn or external) and its "
+            "single responsibility." + _UPSERT,
+        ),
+        _list_tool(
+            "upsert_flow",
+            "flows",
+            Flow,
+            "Record a read or write data flow as ordered steps between recorded components "
+            "(by component ID), each step with a short label." + _UPSERT,
         ),
     )
 }

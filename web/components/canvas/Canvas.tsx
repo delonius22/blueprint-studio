@@ -1,10 +1,16 @@
 // The design canvas (SPECS S11.2, S11.3): one panel per Design list, updated live.
 import type { Design, Entity } from "../../lib/state";
 import styles from "./Canvas.module.css";
+import { DiagramPanel } from "./DiagramPanel";
 import { Panel } from "./Panel";
 
 function num(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(6)));
+}
+
+function named(items: { id: string; name: string }[], id: string): string {
+  const item = items.find((i) => i.id === id);
+  return item ? `${item.name} (${id})` : id;
 }
 
 function entityName(entities: Entity[], id: string): string {
@@ -137,6 +143,43 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
+        </div>
+      </div>
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Step 3 · Architecture</h3>
+        <div className={styles.grid}>
+          <Panel
+            title="Components"
+            items={design.components.map((c) => ({
+              id: c.id,
+              content: (
+                <>
+                  <strong>{c.name}</strong> <span className={styles.tag}>{c.kind.replace("_", " ")}</span>
+                  {c.responsibility && <div className={styles.detail}>{c.responsibility}</div>}
+                </>
+              ),
+            }))}
+          />
+          <Panel
+            title="Data flows"
+            items={design.flows.map((f) => ({
+              id: f.id,
+              content: (
+                <>
+                  <strong>{f.name}</strong> <span className={styles.tag}>{f.kind}</span>
+                  <ol className={styles.steps}>
+                    {f.steps.map((step, index) => (
+                      <li key={index}>
+                        {named(design.components, step.from_component)} →{" "}
+                        {named(design.components, step.to_component)}: {step.label}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              ),
+            }))}
+          />
+          <DiagramPanel design={design} />
         </div>
       </div>
     </div>

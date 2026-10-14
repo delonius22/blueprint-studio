@@ -129,12 +129,12 @@
 
 **Delivers stories:** US-14, US-17
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Component and flow types and tools exist (S2.7, S5.3).
-- [ ] A pure function produces Mermaid source as S11.3 defines; the same input gives the same output.
-- [ ] The diagram panel renders it and shows the source in a collapsible block (S11.3).
-- [ ] The course context in the interviewer prompt carries the three blueprints, and the interviewer frames them as patterns to consider (S5.2, FR-10).
+- [x] Component and flow types and tools exist (S2.7, S5.3).
+- [x] A pure function produces Mermaid source as S11.3 defines; the same input gives the same output.
+- [x] The diagram panel renders it and shows the source in a collapsible block (S11.3).
+- [x] The course context in the interviewer prompt carries the three blueprints, and the interviewer frames them as patterns to consider (S5.2, FR-10).
 
 ---
 

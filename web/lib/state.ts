@@ -12,6 +12,8 @@ export type Entity = Schemas["Entity"];
 export type Relationship = Schemas["Relationship"];
 export type Endpoint = Schemas["Endpoint"];
 export type StorageChoice = Schemas["StorageChoice"];
+export type Component = Schemas["Component"];
+export type Flow = Schemas["Flow"];
 
 export const EMPTY_DESIGN: Design = {
   functional_requirements: [],

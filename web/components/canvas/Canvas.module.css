@@ -102,3 +102,34 @@
 .decided {
   border: 1px solid var(--fg);
 }
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.diagram {
+  overflow-x: auto;
+}
+
+.diagram svg {
+  height: auto;
+  max-width: 100%;
+}
+
+.source {
+  margin-top: 0.5rem;
+}
+
+.source pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  padding: 0.5rem;
+}
+
+.steps {
+  margin: 0.2rem 0 0;
+  padding-left: 1.2rem;
+}
