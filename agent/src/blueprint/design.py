@@ -15,11 +15,14 @@ from pydantic import BaseModel, Field, ValidationError, create_model
 
 from blueprint.domain import (
     DESIGN_PREFIXES,
+    CachePolicy,
+    CapStance,
     Component,
     Design,
     Endpoint,
     Entity,
     Estimate,
+    FailureMode,
     Flow,
     Model,
     NfrTarget,
@@ -217,6 +220,21 @@ LIST_TOOLS: dict[str, ListTool] = {
             "Record a read or write data flow as ordered steps between recorded components "
             "(by component ID), each step with a short label." + _UPSERT,
         ),
+        _list_tool(
+            "upsert_cache_policy",
+            "cache_policies",
+            CachePolicy,
+            "Record a cache policy: the data cached, the strategy (cache-aside, read-through, "
+            "write-through or write-back), the eviction policy (LRU, LFU, TTL-only or other) "
+            "and the TTL in seconds when one applies." + _UPSERT,
+        ),
+        _list_tool(
+            "upsert_failure_mode",
+            "failure_modes",
+            FailureMode,
+            "Record a failure mode the user has reasoned about: the scenario, how the system "
+            "behaves, and how it recovers." + _UPSERT,
+        ),
     )
 }
 
@@ -232,6 +250,7 @@ class DecideStorageChoiceArgs(Model):
 
 
 DECIDE_STORAGE_CHOICE = "decide_storage_choice"
+SET_CAP_STANCE = "set_cap_stance"
 
 
 class DeleteItemArgs(Model):
@@ -245,7 +264,7 @@ STEP_1_EXCLUDED = {"upsert_component", "upsert_flow", "upsert_storage_choice", "
 
 
 def bound_tool_names(current_step: int) -> list[str]:
-    names = [*LIST_TOOLS, DECIDE_STORAGE_CHOICE, DELETE_ITEM]
+    names = [*LIST_TOOLS, DECIDE_STORAGE_CHOICE, SET_CAP_STANCE, DELETE_ITEM]
     if current_step == 1:
         names = [n for n in names if n not in STEP_1_EXCLUDED]
     return names
@@ -258,6 +277,12 @@ def tool_schemas(names: list[str]) -> list[dict[str, Any]]:
         if name == DELETE_ITEM:
             description = "Delete a design item by its ID. Its ID is never reused."
             parameters = DeleteItemArgs.model_json_schema()
+        elif name == SET_CAP_STANCE:
+            description = (
+                "Record the design's CAP stance: CP, AP or mixed, with the rationale. There is one "
+                "stance per design; calling again replaces it."
+            )
+            parameters = CapStance.model_json_schema()
         elif name == DECIDE_STORAGE_CHOICE:
             description = (
                 "Mark a proposed storage choice as decided, once the user has justified it with "
@@ -360,9 +385,27 @@ def run_tool(name: str, args: dict[str, Any], draft: Draft, allowed: list[str]) 
         return json.dumps({"deleted": _delete(draft, args)})
     if name == DECIDE_STORAGE_CHOICE:
         return json.dumps({"decided": _decide_storage_choice(draft, args)})
+    if name == SET_CAP_STANCE:
+        try:
+            stance = CapStance.model_validate(args)
+        except ValidationError as exc:
+            raise ToolFailure(f"invalid arguments: {_errors(exc)}") from None
+        draft.design = draft.design.model_copy(update={"cap_stance": stance})
+        return json.dumps({"recorded": "cap_stance"})
     tool = LIST_TOOLS[name]
     item_id = _upsert(tool, draft, args)
     result: dict[str, str] = {"recorded": item_id}
     if tool.note:
         result["note"] = tool.note
     return json.dumps(result)
+
+
+# --- S5.6 step confirmation blockers ---------------------------------------------------------
+
+
+def step_blockers(step: int, design: Design) -> list[str]:
+    """What must be recorded before ``step`` can be confirmed."""
+    blockers: list[str] = []
+    if step == 3 and not design.failure_modes:
+        blockers.append("Step 3 needs at least one failure mode (upsert_failure_mode).")
+    return blockers

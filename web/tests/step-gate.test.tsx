@@ -63,3 +63,13 @@ describe("StageTracker", () => {
     expect(document.querySelector("[aria-current]")).toBeNull();
   });
 });
+
+describe("blocked confirmation", () => {
+  it("renders no card when the graph answered the call with blockers (S5.6)", () => {
+    const result = JSON.stringify({ error: "Step 3 cannot be confirmed yet.", blockers: ["needs a failure mode"] });
+    const { container } = render(
+      <ConfirmStepCard args={{ step: 3, summary: "done" }} status="complete" result={result} />,
+    );
+    expect(container.innerHTML).toBe("");
+  });
+});

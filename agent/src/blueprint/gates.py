@@ -13,6 +13,10 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
 CONFIRM_STEP = "confirm_step"
 
+# Custom graph event asking the agent endpoint to stream a gate tool call to the browser,
+# under the tool call's own ID, once the graph has decided the card may open.
+OPEN_GATE_EVENT = "blueprint_open_gate"
+
 
 def call_name(messages: Sequence[BaseMessage], tool_call_id: str) -> str | None:
     """The name of the tool call that ``tool_call_id`` answers."""

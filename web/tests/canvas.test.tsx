@@ -42,7 +42,7 @@ describe("Canvas", () => {
 
   it("shows empty panels before anything is recorded", () => {
     render(<Canvas design={EMPTY_DESIGN} />);
-    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(10);
+    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(13);
   });
 });
 
@@ -103,5 +103,25 @@ describe("liveState", () => {
   it("uses the agent's state once it arrives", () => {
     const design = { ...EMPTY_DESIGN, out_of_scope: [{ id: "OOS-1", text: "x" }] };
     expect(liveState({ design, current_step: 2 }, snapshot)).toMatchObject({ design, current_step: 2 });
+  });
+});
+
+describe("Canvas Step 3 panels", () => {
+  it("shows the CAP stance, cache policies and failure modes", () => {
+    render(
+      <Canvas
+        design={{
+          ...EMPTY_DESIGN,
+          cap_stance: { choice: "AP", rationale: "Redirects must stay available" },
+          cache_policies: [{ id: "CACHE-1", data: "hot codes", strategy: "cache-aside", eviction: "LRU", ttl_seconds: 3600 }],
+          failure_modes: [{ id: "FM-1", scenario: "Primary DB fails", behaviour: "Serve from replicas", recovery: "Promote" }],
+        }}
+      />,
+    );
+    expect(panel(/CAP stance/).textContent).toContain("APRedirects must stay available");
+    expect(panel(/Cache policies/).textContent).toContain("cache-aside · LRU · TTL 3600 s");
+    const failures = panel(/Failure modes/);
+    expect(within(failures).getByText("FM-1")).toBeTruthy();
+    expect(failures.textContent).toContain("Recovery: Promote");
   });
 });

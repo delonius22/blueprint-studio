@@ -8,6 +8,16 @@ import styles from "./GateCard.module.css";
 export type ConfirmStepArgs = { step: number; summary: string };
 export type ConfirmStepAnswer = { approved: true } | { approved: false; missing: string };
 
+/** S5.6: a call answered by the graph with blockers never opened a card, so none is shown. */
+export function isBlocked(result: string | undefined): boolean {
+  try {
+    const value = JSON.parse(result ?? "") as unknown;
+    return Boolean(value && typeof value === "object" && "blockers" in value);
+  } catch {
+    return false;
+  }
+}
+
 export function parseAnswer(result: string | undefined): ConfirmStepAnswer | null {
   try {
     const value = JSON.parse(result ?? "") as unknown;
@@ -31,6 +41,7 @@ export function ConfirmStepCard({ args, status, respond, result }: Props) {
   const step = args.step ?? 0;
   const title = `Confirm Step ${step}: ${STEP_NAMES[step] ?? ""}`.trim();
 
+  if (status === "complete" && isBlocked(result)) return null;
   if (status === "complete") {
     const answer = parseAnswer(result);
     return (

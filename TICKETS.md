@@ -146,11 +146,11 @@
 
 **Delivers stories:** US-9
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] CAP stance, cache-policy and failure-mode types and tools exist (S2.7, S5.3).
-- [ ] Confirming Step 3 with no failure mode returns the blocker as a tool result and opens no card (S5.6).
-- [ ] The canvas shows the CAP, cache and failure-mode panels (S11.3).
+- [x] CAP stance, cache-policy and failure-mode types and tools exist (S2.7, S5.3).
+- [x] Confirming Step 3 with no failure mode returns the blocker as a tool result and opens no card (S5.6).
+- [x] The canvas shows the CAP, cache and failure-mode panels (S11.3).
 
 ---
 

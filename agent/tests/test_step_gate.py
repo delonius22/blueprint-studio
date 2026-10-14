@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import END
 from seam import GraphSeam
 
+from blueprint.domain import Design, FailureMode
 from blueprint.graph import route_design_tools, route_interviewer, route_start
 
 CONFIRM_STEP = {
@@ -89,7 +90,14 @@ async def test_steps_advance_one_at_a_time_through_step_5() -> None:
     script: list[Any] = []
     for step in range(1, 6):
         script += [confirm(step, f"gate-{step}"), CRITIQUE]
-    seam = gate_seam(*script)
+    design = Design(
+        failure_modes=[FailureMode(id="FM-1", scenario="DB primary fails", behaviour="Failover")]
+    )
+    seam = GraphSeam(
+        ScriptedChatModel.with_script(*script),
+        frontend_tools=[CONFIRM_STEP],
+        initial={"design": design.model_dump(mode="json"), "id_counters": {"FM": 1}},
+    )
     for step in range(1, 6):
         await seam.send(f"step {step} done")
         await seam.answer(f"gate-{step}", '{"approved": true}')
@@ -129,7 +137,7 @@ def test_routing_is_a_pure_function_of_state() -> None:
     assert route_start(state(HumanMessage("hi"), gate, rejected)) == "interviewer"
     assert route_start(state(HumanMessage("hi"), AIMessage("reply"))) == END
     assert route_start(state()) == END
-    assert route_interviewer(state(HumanMessage("hi"), gate)) == END
+    assert route_interviewer(state(HumanMessage("hi"), gate)) == "design_tools"  # S5.6 check
     assert route_interviewer(state(HumanMessage("hi"), AIMessage("text"))) == END
     assert (
         route_interviewer(state(HumanMessage("hi"), tool_call("upsert_requirement", {})))

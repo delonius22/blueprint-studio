@@ -1,11 +1,20 @@
 """The session REST API (SPECS S3) and the agent endpoint wiring (S4.1, S4.2)."""
 
+import json
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import datetime
 from typing import Annotated, Any, Self
 
-from ag_ui.core import EventType, RunAgentInput, RunErrorEvent
+from ag_ui.core import (
+    CustomEvent,
+    EventType,
+    RunAgentInput,
+    RunErrorEvent,
+    ToolCallArgsEvent,
+    ToolCallEndEvent,
+    ToolCallStartEvent,
+)
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -15,6 +24,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from blueprint.gates import OPEN_GATE_EVENT
 from blueprint.state import SESSION_FIELDS, SessionState, new_session_state
 from blueprint.store import InvalidCursor, SessionRow, SessionStore
 
@@ -126,8 +136,28 @@ class SessionAgent(LangGraphAGUIAgent):
             return
         async for event in super().run(input):  # type: ignore[no-untyped-call]
             yield event
+            if isinstance(event, CustomEvent) and event.name == OPEN_GATE_EVENT:
+                for gate_event in gate_tool_call_events(event.value):
+                    yield gate_event
         if self.after_run is not None:
             await self.after_run(input.thread_id)
+
+
+def gate_tool_call_events(value: dict[str, Any]) -> list[Any]:
+    """The AG-UI events that make the browser open a gate card for this tool call."""
+    call_id = value["id"]
+    return [
+        ToolCallStartEvent(
+            type=EventType.TOOL_CALL_START,
+            tool_call_id=call_id,
+            tool_call_name=value["name"],
+            parent_message_id=value.get("message_id") or call_id,
+        ),
+        ToolCallArgsEvent(
+            type=EventType.TOOL_CALL_ARGS, tool_call_id=call_id, delta=json.dumps(value["args"])
+        ),
+        ToolCallEndEvent(type=EventType.TOOL_CALL_END, tool_call_id=call_id),
+    ]
 
 
 def session_routes(

@@ -179,6 +179,47 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
+          <Panel
+            title="CAP stance"
+            items={
+              design.cap_stance
+                ? [
+                    {
+                      id: design.cap_stance.choice,
+                      content: design.cap_stance.rationale,
+                    },
+                  ]
+                : []
+            }
+          />
+          <Panel
+            title="Cache policies"
+            items={design.cache_policies.map((c) => ({
+              id: c.id,
+              content: (
+                <>
+                  {c.data}
+                  <div className={styles.detail}>
+                    {c.strategy} · {c.eviction}
+                    {c.ttl_seconds != null && <> · TTL {c.ttl_seconds} s</>}
+                  </div>
+                </>
+              ),
+            }))}
+          />
+          <Panel
+            title="Failure modes"
+            items={design.failure_modes.map((f) => ({
+              id: f.id,
+              content: (
+                <>
+                  {f.scenario}
+                  <div className={styles.detail}>Behaviour: {f.behaviour}</div>
+                  {f.recovery && <div className={styles.detail}>Recovery: {f.recovery}</div>}
+                </>
+              ),
+            }))}
+          />
           <DiagramPanel design={design} />
         </div>
       </div>

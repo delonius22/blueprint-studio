@@ -6,6 +6,8 @@ Nodes do the work; routing functions are pure functions of state (S5.1).
 import json
 from typing import Any
 
+from copilotkit.langgraph import copilotkit_customize_config
+from langchain_core.callbacks.manager import adispatch_custom_event
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -13,9 +15,16 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from blueprint.assets import Assets
-from blueprint.design import Draft, ToolFailure, bound_tool_names, run_tool, tool_schemas
+from blueprint.design import (
+    Draft,
+    ToolFailure,
+    bound_tool_names,
+    run_tool,
+    step_blockers,
+    tool_schemas,
+)
 from blueprint.domain import Critique, Design, Model
-from blueprint.gates import CONFIRM_STEP, last_answer, step_approved
+from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_approved
 from blueprint.llm import structured
 from blueprint.models import RoleModels
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
@@ -44,6 +53,11 @@ def _backend_calls(state: DesignState, message: AIMessage) -> list[dict[str, Any
     return [dict(call) for call in message.tool_calls if call["name"] not in frontend]
 
 
+def _gate_calls(message: AIMessage) -> list[dict[str, Any]]:
+    """confirm_step calls, which design_tools checks for blockers before any card opens (S5.6)."""
+    return [dict(call) for call in message.tool_calls if call["name"] == CONFIRM_STEP]
+
+
 # --- routing (pure) --------------------------------------------------------------------------
 
 
@@ -67,9 +81,9 @@ def route_start(state: DesignState) -> str:
 
 
 def route_interviewer(state: DesignState) -> str:
-    """Backend tool calls run in design_tools; a text reply or a pending gate ends the run."""
+    """Backend calls and confirm_step go to design_tools; a text reply ends the run."""
     last = _last(state)
-    if isinstance(last, AIMessage) and _backend_calls(state, last):
+    if isinstance(last, AIMessage) and (_backend_calls(state, last) or _gate_calls(last)):
         return "design_tools"
     return END
 
@@ -82,6 +96,15 @@ def route_design_tools(state: DesignState) -> str:
     if turn and any(call["id"] not in answered for call in turn.tool_calls):
         return END
     return "interviewer"
+
+
+async def open_gate(config: RunnableConfig, message: AIMessage, call: dict[str, Any]) -> None:
+    """Stream a gate tool call to the browser so its card opens (S5.6, S11.4)."""
+    await adispatch_custom_event(
+        OPEN_GATE_EVENT,
+        {"id": call["id"], "name": call["name"], "args": call["args"], "message_id": message.id},
+        config=config,
+    )
 
 
 # --- critique ------------------------------------------------------------------------------
@@ -121,10 +144,14 @@ def build_graph(
         system = interviewer_prompt(assets, state["stage"], step, design)
         tools = tool_schemas(bound_tool_names(step)) + frontend_actions(state)
         model = models.interview.bind_tools(tools)
-        reply = await model.ainvoke([SystemMessage(system), *state["messages"]], config)
+        # Tool calls are not streamed to the browser: backend calls are internal, and a
+        # confirm_step card may only open after design_tools has checked its blockers (S5.6).
+        quiet = copilotkit_customize_config(config, emit_tool_calls=False)
+        quiet["metadata"] = {**quiet.get("metadata", {}), "emit-tool-calls": False}
+        reply = await model.ainvoke([SystemMessage(system), *state["messages"]], quiet)
         return {"messages": [reply]}
 
-    async def design_tools(state: DesignState) -> dict[str, Any]:
+    async def design_tools(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         last = _last(state)
         assert isinstance(last, AIMessage)
         draft = Draft(Design.model_validate(state["design"]), dict(state["id_counters"]))
@@ -138,6 +165,18 @@ def build_graph(
                 draft.counters = counters
                 content = json.dumps({"error": str(failure)})
             results.append(ToolMessage(content, tool_call_id=call["id"], name=call["name"]))
+        for call in _gate_calls(last):
+            blockers = step_blockers(state["current_step"], draft.design)
+            if blockers:
+                content = json.dumps(
+                    {
+                        "error": f"Step {state['current_step']} cannot be confirmed yet.",
+                        "blockers": blockers,
+                    }
+                )
+                results.append(ToolMessage(content, tool_call_id=call["id"], name=call["name"]))
+            else:
+                await open_gate(config, last, call)
         written = draft.design.model_dump(mode="json")
         return {
             "messages": results,
