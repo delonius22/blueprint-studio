@@ -1,7 +1,5 @@
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+.page {
+  min-height: 100vh;
 }
 
 .header {
@@ -14,7 +12,8 @@
   margin: 0;
 }
 
-.chat {
-  flex: 1;
-  min-height: 0;
+.main {
+  margin: 0 auto;
+  max-width: 48rem;
+  padding: 1.5rem 1.25rem;
 }

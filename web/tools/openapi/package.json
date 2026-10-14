@@ -1,0 +1,12 @@
+{
+  "name": "blueprint-openapi-tool",
+  "private": true,
+  "description": "Generates web/lib/api-schema.d.ts from web/openapi.json (SPECS S3.7). Kept apart because openapi-typescript needs the TypeScript 5 compiler API, which TypeScript 7 does not ship.",
+  "scripts": {
+    "gen": "openapi-typescript ../../openapi.json -o ../../lib/api-schema.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

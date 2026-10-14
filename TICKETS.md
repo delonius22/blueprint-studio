@@ -57,13 +57,13 @@
 
 **Delivers stories:** US-1, US-2, US-3, US-4
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Session routes behave as S3.1–S3.5, including `422`, `404` and idempotent delete; every error uses the S3.6 shape.
-- [ ] `DesignState` extends `CopilotKitState` with the stages of S2.3; a new session's state has every S2.2 field with the initial values of S3.1 (S2.1).
-- [ ] The list page shows sessions newest first with name and stage, paginated by keyset cursor (S3.2, S11.1).
-- [ ] State is checkpointed in Postgres with thread ID equal to session ID and survives an `agent` restart (S4.2, NFR-3).
-- [ ] `/openapi.json` describes every route with typed models and error shapes; the frontend's REST types are generated from it (S3.7).
+- [x] Session routes behave as S3.1–S3.5, including `422`, `404` and idempotent delete; every error uses the S3.6 shape.
+- [x] `DesignState` extends `CopilotKitState` with the stages of S2.3; a new session's state has every S2.2 field with the initial values of S3.1 (S2.1).
+- [x] The list page shows sessions newest first with name and stage, paginated by keyset cursor (S3.2, S11.1).
+- [x] State is checkpointed in Postgres with thread ID equal to session ID and survives an `agent` restart (S4.2, NFR-3).
+- [x] `/openapi.json` describes every route with typed models and error shapes; the frontend's REST types are generated from it (S3.7).
 
 ---
 

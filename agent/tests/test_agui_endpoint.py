@@ -11,15 +11,15 @@ way the CopilotKit runtime's HttpAgent does, and show that:
 """
 
 import json
-import uuid
 from typing import Any
 
-import httpx
 from fakes import ScriptedChatModel, tool_call
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
+from service import event_types as types
+from service import post_run, run_input
 
 from blueprint.app import create_app
 from blueprint.graph import build_graph
@@ -35,37 +35,6 @@ CONFIRM_STEP = {
         "required": ["step", "summary"],
     },
 }
-
-
-def run_input(
-    thread_id: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
-) -> dict[str, Any]:
-    return {
-        "threadId": thread_id,
-        "runId": str(uuid.uuid4()),
-        "state": {},
-        "messages": messages,
-        "tools": tools,
-        "context": [],
-        "forwardedProps": {},
-    }
-
-
-async def post_run(app: Any, body: dict[str, Any]) -> list[dict[str, Any]]:
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://agent") as client:
-        response = await client.post("/agent", json=body, headers={"accept": "text/event-stream"})
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/event-stream")
-    return [
-        json.loads(line.removeprefix("data: "))
-        for line in response.text.splitlines()
-        if line.startswith("data: ")
-    ]
-
-
-def types(events: list[dict[str, Any]]) -> list[str]:
-    return [e["type"] for e in events]
 
 
 async def test_chat_reply_streams_through_the_agent_endpoint() -> None:

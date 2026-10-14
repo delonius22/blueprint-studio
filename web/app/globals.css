@@ -3,15 +3,23 @@
   --bg: #ffffff;
   --fg: #1a1a1a;
   --muted: #555555;
-  --border: #d0d0d0;
+  --border: #c4c4c4;
+  --link: #0b57d0;
+  --danger: #b3261e;
+  --surface: #f4f4f5;
+  --focus: #0b57d0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #121212;
     --fg: #f0f0f0;
-    --muted: #b0b0b0;
-    --border: #3a3a3a;
+    --muted: #b8b8b8;
+    --border: #4a4a4a;
+    --link: #8ab4f8;
+    --danger: #f2b8b5;
+    --surface: #1e1e20;
+    --focus: #8ab4f8;
   }
 }
 
@@ -29,4 +37,51 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0.35rem 0.8rem;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+input,
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--link);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

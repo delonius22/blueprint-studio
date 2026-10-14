@@ -102,13 +102,19 @@ describe("browser code", () => {
 
   it("never addresses the agent service directly", () => {
     const root = join(__dirname, "..");
-    const files = [...sourceFiles(join(root, "app")), join(root, "lib", "constants.ts")];
+    const files = [
+      ...sourceFiles(join(root, "app")),
+      ...sourceFiles(join(root, "components")),
+      join(root, "lib", "constants.ts"),
+      join(root, "lib", "sessions.ts"),
+    ];
     for (const file of files) {
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(/AGENT_URL|:8000|\/agent\b/);
     }
-    const page = readFileSync(join(root, "app", "page.tsx"), "utf8");
-    expect(page).toContain("runtimeUrl={RUNTIME_PATH}");
+    const workspace = readFileSync(join(root, "components", "Workspace.tsx"), "utf8");
+    expect(workspace).toContain("runtimeUrl={RUNTIME_PATH}");
+    expect(workspace).toContain("threadId={sessionId}");
     expect(RUNTIME_PATH).toBe("/api/copilotkit");
   });
 });

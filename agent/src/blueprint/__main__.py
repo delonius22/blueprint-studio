@@ -5,13 +5,11 @@ import os
 import sys
 
 import uvicorn
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from blueprint.app import create_app, prepare
+from blueprint.app import assemble, prepare
 from blueprint.errors import StartupError
-from blueprint.graph import build_graph
 
 
 async def serve() -> None:
@@ -26,9 +24,7 @@ async def serve() -> None:
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
         open=False,
     ) as pool:
-        checkpointer = AsyncPostgresSaver(pool)  # type: ignore[arg-type]
-        await checkpointer.setup()
-        app = create_app(build_graph(runtime.models, checkpointer))
+        app = await assemble(runtime, pool)
         server = uvicorn.Server(uvicorn.Config(app, host=settings.host, port=settings.port))
         await server.serve()
 

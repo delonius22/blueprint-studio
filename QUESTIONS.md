@@ -39,3 +39,21 @@ Versions were checked against PyPI and npm on 2026-10-14. Every version pinned i
 **Question:** OQ-2 asks whether CopilotKit frontend tools reach nodes of a hand-built `StateGraph`, or whether the interviewer must run as a `create_agent` subgraph.
 **Options:** (a) Hand-built `StateGraph`, with frontend tools read from state. (b) A `create_agent` subgraph wrapped by `CopilotKitMiddleware`.
 **Resolution (settled by evidence, recorded for review):** (a). In `ag-ui-langgraph` 0.0.47, `LangGraphAgent` writes the run's frontend tools into `state["tools"]` and `state["copilotkit"]["actions"]` for any compiled graph. `CopilotKitMiddleware` is only the `create_agent` route to the same data. T-01's AG-UI endpoint test proves three things through the real `/agent` route: a node of the hand-built graph sees a frontend tool's schema; a call to that tool streams to the client as `TOOL_CALL_*` events and the run ends without executing it; and the next run's tool result reaches the node. `copilotkit_customize_config(config, emit_tool_calls=...)` lets a node hold back tool-call streaming, which S5.6 needs so that blockers are checked before a card opens.
+
+## Q-7 — T-02
+**Clauses:** SPECS S3.7, S4.1, PRD D14
+**Question:** S3.7 says "every route" is described in `/openapi.json` with typed models and S3.6 error shapes. `POST /agent` is the AG-UI protocol endpoint (a server-sent event stream), and `add_langgraph_fastapi_endpoint` also registers `GET /agent/health`; neither is part of the REST contract the frontend's types are generated from.
+**Options:** (a) Describe `/agent` in the REST document: its body is the AG-UI `RunAgentInput` and its response is an event stream that OpenAPI cannot type usefully. (b) Read S3.7 as covering the S3 REST routes (`/api/...`), which are the routes D14 calls "the session and download API".
+**Resolution (reading, recorded for review):** (b). `/agent` is excluded from the schema; every `/api/` route declares typed request and response models and the S3.6 shape for every non-2xx status, and a test enforces it.
+
+## Q-8 — T-02
+**Clauses:** SPECS S4.3, S4.4, NFR-3, US-3
+**Question:** The CopilotKit 1.79 runtime replays a thread's chat history from an in-memory store (`InMemoryAgentRunner`). After the `web` container restarts it has nothing to replay, so a resumed session would show an empty chat although its state and messages are safe in Postgres.
+**Options:** (a) Add a persistent runner store to the web service: a second copy of every conversation. (b) When a thread is still empty after connecting, the workspace starts a run that adds no message; the graph's pure START route ends at once, and the agent sends its message and state snapshots from the checkpoint, with no model call.
+**Resolution (library behaviour, settled):** (b). The checkpoint stays the single source of truth (D3, D10).
+
+## Q-9 — T-02
+**Clauses:** PRD D13 (TypeScript 7.0.2), SPECS S3.7
+**Question:** `openapi-typescript`, which generates the frontend's REST types, needs the TypeScript 5 compiler API, which TypeScript 7.0.2 (the native compiler) does not ship. npm cannot install it beside the pinned TypeScript 7.
+**Options:** (a) Downgrade the app to TypeScript 5: contradicts D13. (b) Keep the app on 7.0.2 and run the generator from its own pinned tool package (`web/tools/openapi`, TypeScript 5.9.3) that is not part of the app's build.
+**Resolution (D13 consequence, settled):** (b). A test checks that the checked-in types equal the generator's output for the checked-in `openapi.json`, and another that `openapi.json` equals the service's document.

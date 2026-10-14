@@ -7,16 +7,19 @@ from pathlib import Path
 from typing import Any
 
 from ag_ui_langgraph import add_langgraph_fastapi_endpoint
-from copilotkit import LangGraphAGUIAgent
 from fastapi import FastAPI
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
+from psycopg_pool import AsyncConnectionPool
 
+from blueprint.api import AGENT_NAME, SessionAgent, install_error_handlers, session_routes
 from blueprint.assets import Assets, load_assets
 from blueprint.capability import check_models
+from blueprint.graph import build_graph
 from blueprint.models import RoleModels, build_models, review_model_distinct
+from blueprint.openapi import TITLE, VERSION
 from blueprint.settings import Settings, load_settings
-
-AGENT_NAME = "blueprint"
+from blueprint.store import SessionStore
 
 
 @dataclass(frozen=True)
@@ -44,12 +47,47 @@ async def prepare(
     return Runtime(settings, assets, models, review_model_distinct(settings))
 
 
-def create_app(graph: CompiledStateGraph[Any, Any, Any, Any]) -> FastAPI:
-    app = FastAPI(title="Blueprint Studio agent", version="0.1.0")
-    agent = LangGraphAGUIAgent(
+def create_app(
+    graph: CompiledStateGraph[Any, Any, Any, Any], store: SessionStore | None = None
+) -> FastAPI:
+    """The agent endpoint at /agent (S4.1); with a store, runs are limited to existing sessions."""
+    app = FastAPI(title=TITLE, version=VERSION)
+    install_error_handlers(app)
+    agent = SessionAgent(
         name=AGENT_NAME,
         description="Blueprint Studio system-design interviewer",
         graph=graph,
     )
-    add_langgraph_fastapi_endpoint(app, agent, "/agent")
+    if store is not None:
+        sessions = store
+
+        async def exists(session_id: str) -> bool:
+            return await sessions.get(session_id) is not None
+
+        async def after_run(session_id: str) -> None:
+            values = (await graph.aget_state({"configurable": {"thread_id": session_id}})).values
+            await sessions.record_progress(session_id, values["stage"], values["current_step"])
+
+        agent.exists, agent.after_run = exists, after_run
+    add_langgraph_fastapi_endpoint(app, agent, "/agent", include_in_schema=False)
+    return app
+
+
+async def assemble(runtime: Runtime, pool: AsyncConnectionPool[Any]) -> FastAPI:
+    """The full service: Postgres checkpoints (S4.2), the session API (S3) and /agent (S4.1)."""
+    checkpointer = AsyncPostgresSaver(pool)
+    await checkpointer.setup()
+    store = SessionStore(pool)
+    await store.setup()
+    graph = build_graph(runtime.models, checkpointer)
+    app = create_app(graph, store)
+    app.include_router(
+        session_routes(
+            store,
+            graph,
+            checkpointer,
+            runtime.settings.session_token_budget,
+            runtime.review_model_distinct,
+        )
+    )
     return app
