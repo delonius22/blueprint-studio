@@ -32,12 +32,16 @@ class Call(BaseModel):
 
 class ScriptedChatModel(BaseChatModel):
     name: str = "scripted"
+    # When set, every response reports this (input, output) token usage, like a provider would.
+    usage: tuple[int, int] | None = None
     _script: list[ScriptEntry] = PrivateAttr(default_factory=list)
     _calls: list[Call] = PrivateAttr(default_factory=list)
 
     @classmethod
-    def with_script(cls, *entries: ScriptEntry, name: str = "scripted") -> ScriptedChatModel:
-        model = cls(name=name)
+    def with_script(
+        cls, *entries: ScriptEntry, name: str = "scripted", usage: tuple[int, int] | None = None
+    ) -> ScriptedChatModel:
+        model = cls(name=name, usage=usage)
         model._script = list(entries)
         return model
 
@@ -67,7 +71,21 @@ class ScriptedChatModel(BaseChatModel):
         entry = self._next()
         if not isinstance(entry, AIMessage):
             raise AssertionError(f"{self.name}: expected a chat call, script has {entry!r}")
-        return entry
+        return self._with_usage(entry)
+
+    def _with_usage(self, message: AIMessage) -> AIMessage:
+        if self.usage is None or message.usage_metadata:
+            return message
+        tokens_in, tokens_out = self.usage
+        return message.model_copy(
+            update={
+                "usage_metadata": {
+                    "input_tokens": tokens_in,
+                    "output_tokens": tokens_out,
+                    "total_tokens": tokens_in + tokens_out,
+                }
+            }
+        )
 
     def _generate(
         self,
@@ -91,6 +109,10 @@ class ScriptedChatModel(BaseChatModel):
         for i, word in enumerate(words):
             piece = word if i == len(words) - 1 else word + " "
             yield ChatGenerationChunk(message=AIMessageChunk(content=piece, id=reply.id))
+        if reply.usage_metadata:
+            yield ChatGenerationChunk(
+                message=AIMessageChunk(content="", id=reply.id, usage_metadata=reply.usage_metadata)
+            )
         # Like OpenAI-compatible servers: the name and id first, then the arguments.
         for i, call in enumerate(reply.tool_calls):
             for part in (
@@ -107,15 +129,29 @@ class ScriptedChatModel(BaseChatModel):
         return self.bind(tools=list(tools), **kwargs)
 
     def with_structured_output(  # type: ignore[override]
-        self, schema: type[BaseModel], *, method: str = "json_schema", **kwargs: Any
-    ) -> Runnable[LanguageModelInput, BaseModel]:
-        def answer(value: LanguageModelInput, config: RunnableConfig | None = None) -> BaseModel:
+        self,
+        schema: type[BaseModel],
+        *,
+        method: str = "json_schema",
+        include_raw: bool = False,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, Any]:
+        """Like LangChain: with include_raw, parse failures come back as parsing_error."""
+
+        def answer(value: LanguageModelInput, config: RunnableConfig | None = None) -> Any:
             messages = value if isinstance(value, list) else []
             self._calls.append(Call(messages=messages, tools=[], structured_method=method))
             entry = self._next()
             if not isinstance(entry, dict):
                 raise AssertionError(f"{self.name}: expected a structured call, got {entry!r}")
-            return schema.model_validate(entry)
+            raw = self._with_usage(AIMessage(content=json.dumps(entry)))
+            try:
+                parsed = schema.model_validate(entry)
+            except Exception as exc:
+                if not include_raw:
+                    raise
+                return {"raw": raw, "parsed": None, "parsing_error": exc}
+            return {"raw": raw, "parsed": parsed, "parsing_error": None} if include_raw else parsed
 
         return RunnableLambda(answer)
 
@@ -128,3 +164,20 @@ def _tool_name(tool: Any) -> str:
 
 def tool_call(name: str, args: dict[str, Any], call_id: str = "call_1") -> AIMessage:
     return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": call_id}])
+
+
+class ProviderError(Exception):
+    """An HTTP error from a provider, shaped like the OpenAI SDK's APIStatusError."""
+
+    def __init__(self, status_code: int, retry_after: str | None = None) -> None:
+        super().__init__(f"Error code: {status_code}")
+        self.status_code = status_code
+        headers = {"retry-after": retry_after} if retry_after else {}
+        self.response = type("Response", (), {"headers": headers})()
+
+
+class FakeTimeout(Exception):
+    """Shaped like openai.APITimeoutError."""
+
+
+FakeTimeout.__name__ = "APITimeoutError"

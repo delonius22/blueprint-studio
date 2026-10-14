@@ -9,14 +9,17 @@ import {
   useHumanInTheLoop,
 } from "@copilotkit/react-core/v2";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
+import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
 import { liveState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
+import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
 import { StageTracker } from "./StageTracker";
+import { TokenMeter } from "./TokenMeter";
 import styles from "./Workspace.module.css";
 
 // The runtime keeps a thread's events in memory only. After a restart it has nothing to
@@ -59,11 +62,52 @@ function useGates() {
   });
 }
 
+// S11.6: last_error as a dismissible alert whose Retry re-sends the last user turn.
+function useLastError(error: ErrorInfo | null) {
+  const { copilotkit } = useCopilotKit();
+  const { agent } = useAgent({ agentId: AGENT_NAME });
+  const failedTurn = useRef<string | null>(null);
+  const [dismissed, setDismissed] = useState<ErrorInfo | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  useEffect(() => {
+    if (error && failedTurn.current === null) {
+      const lastUser = [...agent.messages].reverse().find((m) => m.role === "user");
+      failedTurn.current = lastUser?.id ?? null;
+    }
+    if (!error) failedTurn.current = null;
+  }, [agent, error]);
+
+  useEffect(() => {
+    const subscription = agent.subscribe({
+      onRunInitialized: ({ state, messages }) => {
+        const next = clearErrorForNewTurn(state as Record<string, unknown>, messages, failedTurn.current);
+        return next ? { state: next } : undefined;
+      },
+    });
+    return () => subscription.unsubscribe();
+  }, [agent]);
+
+  async function retry() {
+    setRetrying(true);
+    try {
+      agent.setState({ ...(agent.state as Record<string, unknown>), last_error: null });
+      await copilotkit.runAgent({ agent });
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  const visible = error && error !== dismissed && error.message !== dismissed?.message ? error : null;
+  return { visible, retry, dismiss: () => setDismissed(error), retrying };
+}
+
 function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
   useGates();
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
+  const lastError = useLastError((state.last_error as ErrorInfo | null) ?? null);
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -74,7 +118,16 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           currentStep={state.current_step}
           confirmedSteps={state.confirmed_steps}
         />
+        <TokenMeter used={state.tokens_used} budget={state.token_budget} />
       </header>
+      {lastError.visible && (
+        <ErrorAlert
+          error={lastError.visible}
+          busy={lastError.retrying}
+          onRetry={() => void lastError.retry()}
+          onDismiss={lastError.dismiss}
+        />
+      )}
       <div className={styles.body}>
         <main className={styles.main}>
           <Canvas design={state.design} />

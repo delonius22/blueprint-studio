@@ -357,14 +357,14 @@
 
 **Delivers stories:** US-45, US-46, US-47, US-48, US-50
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Model calls retry as S13.1 defines; after exhausted retries only `last_error` changes (S13.2), proven through the graph seam with a failing fake model.
-- [ ] Token accounting per role, the budget stop and the usage estimate behave as S13.3 defines.
-- [ ] Structured output falls back from JSON-schema mode to tool calling as S13.4 defines.
-- [ ] The error alert, Retry action and per-role token meter behave as S11.6 defines.
-- [ ] Logs follow S13.5, including `role`, `ttft_ms` and `export_ms`; LangSmith tracing toggles by variable.
-- [ ] A test scans log output, the web bundle and every download kind for both configured key values and finds none (S1.5, NFR-6).
+- [x] Model calls retry as S13.1 defines; after exhausted retries only `last_error` changes (S13.2), proven through the graph seam with a failing fake model.
+- [x] Token accounting per role, the budget stop and the usage estimate behave as S13.3 defines.
+- [x] Structured output falls back from JSON-schema mode to tool calling as S13.4 defines.
+- [x] The error alert, Retry action and per-role token meter behave as S11.6 defines.
+- [x] Logs follow S13.5, including `role`, `ttft_ms` and `export_ms`; LangSmith tracing toggles by variable.
+- [x] A test scans log output, the web bundle and every download kind for both configured key values and finds none (S1.5, NFR-6).
 
 ---
 

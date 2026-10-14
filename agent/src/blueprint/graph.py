@@ -25,7 +25,7 @@ from blueprint.design import (
 )
 from blueprint.domain import Critique, Design, Model
 from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_approved
-from blueprint.llm import structured
+from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
 from blueprint.state import DesignState
@@ -68,6 +68,8 @@ def route_start(state: DesignState) -> str:
     critic (S5.7, S5.8); any other gate answer, including a rejection, goes to the
     interviewer. A run with nothing new ends at once (used to re-sync a thread).
     """
+    if state.get("last_error"):
+        return END
     messages = list(state.get("messages") or [])
     answer = last_answer(messages)
     if answer is not None:
@@ -81,7 +83,9 @@ def route_start(state: DesignState) -> str:
 
 
 def route_interviewer(state: DesignState) -> str:
-    """Backend calls and confirm_step go to design_tools; a text reply ends the run."""
+    """Backend calls and confirm_step go to design_tools; a text reply or an error ends the run."""
+    if state.get("last_error"):
+        return END
     last = _last(state)
     if isinstance(last, AIMessage) and (_backend_calls(state, last) or _gate_calls(last)):
         return "design_tools"
@@ -136,20 +140,35 @@ def format_critique(critique: Critique) -> str:
 
 
 def build_graph(
-    models: RoleModels, checkpointer: BaseCheckpointSaver[Any], assets: Assets
+    models: RoleModels,
+    checkpointer: BaseCheckpointSaver[Any],
+    assets: Assets,
+    gateway: ModelGateway | None = None,
 ) -> Graph:
+    calls = gateway or ModelGateway(models)
+
     async def interviewer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         step = state["current_step"]
         design = Design.model_validate(state["design"])
         system = interviewer_prompt(assets, state["stage"], step, design)
         tools = tool_schemas(bound_tool_names(step)) + frontend_actions(state)
-        model = models.interview.bind_tools(tools)
         # Tool calls are not streamed to the browser: backend calls are internal, and a
         # confirm_step card may only open after design_tools has checked its blockers (S5.6).
         quiet = copilotkit_customize_config(config, emit_tool_calls=False)
         quiet["metadata"] = {**quiet.get("metadata", {}), "emit-tool-calls": False}
-        reply = await model.ainvoke([SystemMessage(system), *state["messages"]], quiet)
-        return {"messages": [reply]}
+        meter = Meter.for_node(state, "interviewer")
+        try:
+            reply = await calls.chat(
+                meter,
+                "interview",
+                [SystemMessage(system), *state["messages"]],
+                quiet,
+                tools,
+                measure_ttft=True,
+            )
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}  # S13.2: nothing else changes
+        return {"messages": [reply], "tokens_used": meter.used, "last_error": None}
 
     async def design_tools(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         last = _last(state)
@@ -189,17 +208,27 @@ def build_graph(
         """S5.7 approval and S5.8 critique: confirm the step, critique it, move on."""
         step = state["current_step"]
         design = Design.model_validate(state["design"])
-        draft = await structured(
-            models.interview,
-            CritiqueDraft,
-            [
-                SystemMessage(critic_prompt(assets, step, design)),
-                HumanMessage("Conversation so far:\n\n" + transcript(state["messages"])),
-            ],
-            config,
-        )
+        meter = Meter.for_node(state, "critic")
+        try:
+            draft = await calls.structured(
+                meter,
+                "interview",
+                CritiqueDraft,
+                [
+                    SystemMessage(critic_prompt(assets, step, design)),
+                    HumanMessage("Conversation so far:\n\n" + transcript(state["messages"])),
+                ],
+                config,
+            )
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}
+        except InvalidStructuredOutput as invalid:
+            error = ModelCallFailed("invalid_output", str(invalid), retryable=True)
+            return {"last_error": error.info(), "tokens_used": meter.used}
         critique = Critique(step=step, **draft.model_dump())
         return {
+            "tokens_used": meter.used,
+            "last_error": None,
             "confirmed_steps": sorted({*state["confirmed_steps"], step}),
             "current_step": min(step + 1, 5),
             "critiques": [*state["critiques"], critique.model_dump(mode="json")],

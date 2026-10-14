@@ -53,3 +53,4 @@ def test_factory_builds_both_roles_from_their_own_variables(env: dict[str, str])
         assert (model.openai_api_base, model.model_name) == (url, name)
         assert isinstance(model.openai_api_key, SecretStr)
         assert model.openai_api_key.get_secret_value() == key
+        assert (model.max_retries, model.request_timeout) == (0, 120.0)  # S13.1 governs retries

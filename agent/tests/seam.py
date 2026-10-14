@@ -10,6 +10,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from blueprint.assets import load_assets
 from blueprint.domain import Design
 from blueprint.graph import build_graph
+from blueprint.llm import ModelGateway
 from blueprint.models import RoleModels
 from blueprint.state import new_session_state
 
@@ -24,18 +25,31 @@ class GraphSeam:
         review_model_distinct: bool = True,
         token_budget: int = 2_000_000,
         initial: dict[str, Any] | None = None,
+        jitter: float = 0.5,
     ) -> None:
         self.interview = interview
         self.review = review or ScriptedChatModel.with_script(name="review")
         self.assets = load_assets()
-        self.graph = build_graph(
-            RoleModels(interview=self.interview, review=self.review), InMemorySaver(), self.assets
-        )
+        self.sleeps: list[float] = []
+        models = RoleModels(interview=self.interview, review=self.review)
+        self.gateway = ModelGateway(models, sleep=self._sleep, jitter=lambda: jitter)
+        self.graph = build_graph(models, InMemorySaver(), self.assets, self.gateway)
         self.frontend_tools = frontend_tools or []
         self.review_model_distinct = review_model_distinct
         self.token_budget = token_budget
         self.initial = initial or {}
         self._started: set[str] = set()
+
+    async def _sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+
+    async def retry(self, thread_id: str = "session-1") -> dict[str, Any]:
+        """What the workspace's Retry action does: clear last_error and run with no new message."""
+        update: Any = {
+            "last_error": None,
+            "copilotkit": {"actions": self.frontend_tools, "context": []},
+        }
+        return dict(await self.graph.ainvoke(update, self.config(thread_id)))
 
     def config(self, thread_id: str) -> RunnableConfig:
         return {"configurable": {"thread_id": thread_id}}
