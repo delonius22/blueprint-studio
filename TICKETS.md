@@ -36,16 +36,16 @@
 
 **Delivers stories:** US-51, US-52, US-55
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `docker compose up` with one `.env` starts `web`, `agent` and `db`; `.env.example` documents every S1.3 variable with an OpenAI-compatible block and an Anthropic block (S1.1, S1.2, S1.3).
-- [ ] A chat message produces a streamed reply through the runtime proxy, never a direct browser call to FastAPI (S4.1, S4.3, S4.4).
-- [ ] The agent refuses to start, naming the variable, for each condition in S1.4.
-- [ ] Every chat model comes from the one two-role factory; no other module imports a provider SDK (S1.6).
-- [ ] The startup check runs for both roles and refuses to start naming the role, capability, provider and model; `SKIP_MODEL_CHECK=true` skips it (S1.7).
-- [ ] `review_model_distinct` is computed at startup as S1.8 defines.
-- [ ] `app-assets/` ships as package data with the five files of S12.1, copied verbatim from this repository's `app-assets/`; the agent refuses to start, naming the file, if any is missing or empty (S12.1, S12.2).
-- [ ] A graph-seam test with two scripted fake models passes, proving the seam before any feature exists.
+- [x] `docker compose up` with one `.env` starts `web`, `agent` and `db`; `.env.example` documents every S1.3 variable with an OpenAI-compatible block and an Anthropic block (S1.1, S1.2, S1.3).
+- [x] A chat message produces a streamed reply through the runtime proxy, never a direct browser call to FastAPI (S4.1, S4.3, S4.4).
+- [x] The agent refuses to start, naming the variable, for each condition in S1.4.
+- [x] Every chat model comes from the one two-role factory; no other module imports a provider SDK (S1.6).
+- [x] The startup check runs for both roles and refuses to start naming the role, capability, provider and model; `SKIP_MODEL_CHECK=true` skips it (S1.7).
+- [x] `review_model_distinct` is computed at startup as S1.8 defines.
+- [x] `app-assets/` ships as package data with the five files of S12.1, copied verbatim from this repository's `app-assets/`; the agent refuses to start, naming the file, if any is missing or empty (S12.1, S12.2).
+- [x] A graph-seam test with two scripted fake models passes, proving the seam before any feature exists.
 
 ---
 

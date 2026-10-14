@@ -1,0 +1,6 @@
+src/blueprint/app_assets/
+.venv/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

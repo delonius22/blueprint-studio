@@ -1,0 +1,10 @@
+# The agent image is built from the repository root; send only what it needs.
+*
+!agent/pyproject.toml
+!agent/uv.lock
+!agent/.python-version
+!agent/hatch_build.py
+!agent/src/
+!app-assets/
+agent/src/blueprint/app_assets/
+**/__pycache__/
