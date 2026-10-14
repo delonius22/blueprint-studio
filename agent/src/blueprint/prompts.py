@@ -5,6 +5,8 @@ course context, the current stage and step, a compact ID-labelled summary of
 the design record, and any edit note (S5.9).
 """
 
+from typing import Any
+
 from blueprint.assets import Assets
 from blueprint.domain import Design
 
@@ -172,3 +174,33 @@ def interviewer_prompt(
     if edit_note:
         parts.append("## Edits made by the user\n" + edit_note)
     return "\n\n".join(parts)
+
+
+def critic_prompt(assets: Assets, step: int, design: Design) -> str:
+    """The critic's system prompt (S5.8): the course rubric, the confirmed step and the record."""
+    return "\n\n".join(
+        [
+            assets.course_context.rstrip("\n"),
+            "## Your task\n"
+            f"The user has just confirmed Step {step} of 5 — {STEP_NAMES[step]}. "
+            "Critique that step of their design against the framework and the five evaluation "
+            "dimensions above. Return three lists: strengths and alignment; bottlenecks and "
+            "unaddressed trade-offs; probing or next-step questions. Ground every point in the "
+            "design record or the conversation, citing item IDs where they apply. Do not add "
+            "requirements or design items, and do not answer your own questions.",
+            "## Design record\n" + design_summary(design),
+        ]
+    )
+
+
+def transcript(messages: list[Any]) -> str:
+    """The conversation as plain text: user and interviewer turns only."""
+    lines: list[str] = []
+    for message in messages:
+        text = getattr(message, "text", "")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        role = {"human": "User", "ai": "Interviewer"}.get(getattr(message, "type", ""))
+        if role:
+            lines.append(f"{role}: {text.strip()}")
+    return "\n\n".join(lines) if lines else "(no conversation yet)"

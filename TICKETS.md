@@ -94,13 +94,13 @@
 
 **Delivers stories:** US-15, US-16
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `confirm_step` is a frontend tool rendered with `useHumanInTheLoop`; rejection requires text (S5.7, S11.4).
-- [ ] Approval and rejection update state exactly as S5.7 defines.
-- [ ] After each approval the `critic` stores one critique with strengths, bottlenecks and questions (S5.8, S2.8).
-- [ ] Routing is a pure function of state and ends the run while a gate call is unanswered (S5.1), verified through the graph seam.
-- [ ] The header shows the stage tracker with current and confirmed steps (S11.2).
+- [x] `confirm_step` is a frontend tool rendered with `useHumanInTheLoop`; rejection requires text (S5.7, S11.4).
+- [x] Approval and rejection update state exactly as S5.7 defines.
+- [x] After each approval the `critic` stores one critique with strengths, bottlenecks and questions (S5.8, S2.8).
+- [x] Routing is a pure function of state and ends the run while a gate call is unanswered (S5.1), verified through the graph seam.
+- [x] The header shows the stage tracker with current and confirmed steps (S11.2).
 
 ---
 

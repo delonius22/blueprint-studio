@@ -1,13 +1,22 @@
 "use client";
 
 // The session workspace (SPECS S11.1, S11.2): CopilotKit wired to this session's thread (S4.4).
-import { CopilotChat, CopilotKit, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+import {
+  CopilotChat,
+  CopilotKit,
+  useAgent,
+  useCopilotKit,
+  useHumanInTheLoop,
+} from "@copilotkit/react-core/v2";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
 import { liveState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
+import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
+import { StageTracker } from "./StageTracker";
 import styles from "./Workspace.module.css";
 
 // The runtime keeps a thread's events in memory only. After a restart it has nothing to
@@ -29,18 +38,51 @@ function useThreadHistory(sessionId: string) {
   }, [copilotkit, agent, sessionId]);
 }
 
-function WorkspaceBody({ session }: { session: SessionDetail }) {
+// Approval gates are frontend tools rendered as cards (PRD D5, SPECS S11.4).
+function useGates() {
+  useHumanInTheLoop<ConfirmStepArgs>({
+    name: "confirm_step",
+    description:
+      "Ask the user to confirm that the current framework step is complete before moving to " +
+      "the next one. Call it only when the step's questions are answered and recorded. " +
+      "step: the current step number. summary: a short summary of what the step established. " +
+      'The answer is {"approved": true} or {"approved": false, "missing": "<what the user says is missing>"}.',
+    parameters: z.object({ step: z.number().int().min(1).max(5), summary: z.string() }),
+    render: ({ args, status, respond, result }) => (
+      <ConfirmStepCard
+        args={args}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (answer) => void respond(answer) : undefined}
+        result={result}
+      />
+    ),
+  });
+}
+
+function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
+  useGates();
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
   return (
-    <div className={styles.body}>
-      <main className={styles.main}>
-        <Canvas design={state.design} />
-      </main>
-      <aside className={styles.chat} aria-label="Interview chat">
-        <CopilotChat agentId={AGENT_NAME} threadId={session.id} />
-      </aside>
+    <div className={styles.shell}>
+      <header className={styles.header}>
+        <Link href="/">Sessions</Link>
+        <h1>{session.name}</h1>
+        <StageTracker
+          stage={state.stage}
+          currentStep={state.current_step}
+          confirmedSteps={state.confirmed_steps}
+        />
+      </header>
+      <div className={styles.body}>
+        <main className={styles.main}>
+          <Canvas design={state.design} />
+        </main>
+        <aside className={styles.chat} aria-label="Interview chat">
+          <CopilotChat agentId={AGENT_NAME} threadId={session.id} />
+        </aside>
+      </div>
     </div>
   );
 }
@@ -77,16 +119,9 @@ export function Workspace({ sessionId }: { sessionId: string }) {
       </main>
     );
   }
-
   return (
     <CopilotKit runtimeUrl={RUNTIME_PATH} agentId={AGENT_NAME}>
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <Link href="/">Sessions</Link>
-          <h1>{session.name}</h1>
-        </header>
-        <WorkspaceBody session={session} />
-      </div>
+      <WorkspaceShell session={session} />
     </CopilotKit>
   );
 }

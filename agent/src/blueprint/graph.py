@@ -14,9 +14,11 @@ from langgraph.graph.state import CompiledStateGraph
 
 from blueprint.assets import Assets
 from blueprint.design import Draft, ToolFailure, bound_tool_names, run_tool, tool_schemas
-from blueprint.domain import Design
+from blueprint.domain import Critique, Design, Model
+from blueprint.gates import CONFIRM_STEP, last_answer, step_approved
+from blueprint.llm import structured
 from blueprint.models import RoleModels
-from blueprint.prompts import interviewer_prompt
+from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
 from blueprint.state import DesignState
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]
@@ -46,9 +48,20 @@ def _backend_calls(state: DesignState, message: AIMessage) -> list[dict[str, Any
 
 
 def route_start(state: DesignState) -> str:
-    """A run with nothing new from the user ends at once (used to re-sync a thread)."""
-    last = _last(state)
-    if isinstance(last, HumanMessage | ToolMessage):
+    """Route a new run by what the user just sent (S5.1).
+
+    A chat message goes to the interviewer; an approved ``confirm_step`` goes to the
+    critic (S5.7, S5.8); any other gate answer, including a rejection, goes to the
+    interviewer. A run with nothing new ends at once (used to re-sync a thread).
+    """
+    messages = list(state.get("messages") or [])
+    answer = last_answer(messages)
+    if answer is not None:
+        name, content = answer
+        if name == CONFIRM_STEP and step_approved(content):
+            return "critic"
+        return "interviewer"
+    if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
 
@@ -69,6 +82,31 @@ def route_design_tools(state: DesignState) -> str:
     if turn and any(call["id"] not in answered for call in turn.tool_calls):
         return END
     return "interviewer"
+
+
+# --- critique ------------------------------------------------------------------------------
+
+
+class CritiqueDraft(Model):
+    """What the critic model returns (S2.8 Critique without the step)."""
+
+    strengths: list[str]
+    bottlenecks: list[str]
+    questions: list[str]
+
+
+def format_critique(critique: Critique) -> str:
+    """The critique as a chat message in the three-part format of FR-9."""
+
+    def bullets(items: list[str]) -> str:
+        return "\n".join(f"- {item}" for item in items) or "- (none)"
+
+    return (
+        f"**Step {critique.step} critique**\n\n"
+        f"🟢 **Strengths & Alignment**\n{bullets(critique.strengths)}\n\n"
+        f"⚠️ **Bottlenecks & Unaddressed Trade-Offs**\n{bullets(critique.bottlenecks)}\n\n"
+        f"❓ **Probing / Next-Step Questions**\n{bullets(critique.questions)}"
+    )
 
 
 # --- nodes -----------------------------------------------------------------------------------
@@ -108,10 +146,33 @@ def build_graph(
             "id_counters": draft.counters,
         }
 
+    async def critic(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
+        """S5.7 approval and S5.8 critique: confirm the step, critique it, move on."""
+        step = state["current_step"]
+        design = Design.model_validate(state["design"])
+        draft = await structured(
+            models.interview,
+            CritiqueDraft,
+            [
+                SystemMessage(critic_prompt(assets, step, design)),
+                HumanMessage("Conversation so far:\n\n" + transcript(state["messages"])),
+            ],
+            config,
+        )
+        critique = Critique(step=step, **draft.model_dump())
+        return {
+            "confirmed_steps": sorted({*state["confirmed_steps"], step}),
+            "current_step": min(step + 1, 5),
+            "critiques": [*state["critiques"], critique.model_dump(mode="json")],
+            "messages": [AIMessage(format_critique(critique))],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
-    builder.add_conditional_edges(START, route_start, ["interviewer", END])
+    builder.add_node("critic", critic)
+    builder.add_conditional_edges(START, route_start, ["interviewer", "critic", END])
+    builder.add_edge("critic", END)
     builder.add_conditional_edges("interviewer", route_interviewer, ["design_tools", END])
     builder.add_conditional_edges("design_tools", route_design_tools, ["interviewer", END])
     return builder.compile(checkpointer=checkpointer)

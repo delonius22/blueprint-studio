@@ -1,0 +1,53 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+  padding: 0.9rem;
+}
+
+.card h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.summary {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.primary {
+  background: var(--link);
+  border-color: var(--link);
+  color: var(--bg);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+  min-height: 4.5rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.outcome {
+  color: var(--muted);
+  margin: 0;
+}
