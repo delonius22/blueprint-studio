@@ -23,6 +23,7 @@ class GraphSeam:
         frontend_tools: list[dict[str, Any]] | None = None,
         review_model_distinct: bool = True,
         token_budget: int = 2_000_000,
+        initial: dict[str, Any] | None = None,
     ) -> None:
         self.interview = interview
         self.review = review or ScriptedChatModel.with_script(name="review")
@@ -33,6 +34,7 @@ class GraphSeam:
         self.frontend_tools = frontend_tools or []
         self.review_model_distinct = review_model_distinct
         self.token_budget = token_budget
+        self.initial = initial or {}
         self._started: set[str] = set()
 
     def config(self, thread_id: str) -> RunnableConfig:
@@ -41,6 +43,7 @@ class GraphSeam:
     async def _ensure_session(self, thread_id: str) -> None:
         if thread_id not in self._started:
             initial = new_session_state(thread_id, self.token_budget, self.review_model_distinct)
+            initial |= self.initial
             await self.graph.aupdate_state(self.config(thread_id), initial, as_node="__start__")
             self._started.add(thread_id)
 
@@ -70,3 +73,16 @@ class GraphSeam:
 
     async def messages(self, thread_id: str = "session-1") -> list[BaseMessage]:
         return list((await self.state(thread_id))["messages"])
+
+
+def at_step(
+    step: int, design: Design | None = None, counters: dict[str, int] | None = None
+) -> dict[str, Any]:
+    """Initial state overrides for a session that has confirmed every step before ``step``."""
+    overrides: dict[str, Any] = {"current_step": step, "confirmed_steps": list(range(1, step))}
+    if design is not None:
+        overrides["design"] = design.model_dump(mode="json")
+        overrides["agent_design"] = overrides["design"]
+    if counters is not None:
+        overrides["id_counters"] = counters
+    return overrides

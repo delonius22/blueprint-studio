@@ -76,3 +76,29 @@
   font-size: 0.75rem;
   padding: 0 0.3rem;
 }
+
+.fields {
+  list-style: none;
+  margin: 0.2rem 0;
+  padding: 0;
+}
+
+.fields .tag {
+  margin-left: 0.3rem;
+}
+
+.proposed,
+.decided {
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 0 0.35rem;
+}
+
+.proposed {
+  border: 1px dashed var(--danger);
+  color: var(--danger);
+}
+
+.decided {
+  border: 1px solid var(--fg);
+}

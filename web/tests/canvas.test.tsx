@@ -42,7 +42,53 @@ describe("Canvas", () => {
 
   it("shows empty panels before anything is recorded", () => {
     render(<Canvas design={EMPTY_DESIGN} />);
-    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(4);
+    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(8);
+  });
+});
+
+describe("Canvas Step 2 panels", () => {
+  it("shows entities, relationships, endpoints and storage choices with their IDs", () => {
+    render(
+      <Canvas
+        design={{
+          ...EMPTY_DESIGN,
+          entities: [
+            { id: "ENT-1", name: "User", fields: [{ name: "id", type: "uuid", key: "pk" }], indexes: [] },
+            {
+              id: "ENT-2",
+              name: "Url",
+              fields: [{ name: "owner_id", type: "uuid", key: "fk", references: "ENT-1" }],
+              indexes: ["owner_id"],
+              est_record_bytes: 500,
+            },
+          ],
+          relationships: [{ id: "REL-1", from_entity: "ENT-1", to_entity: "ENT-2", cardinality: "1:N" }],
+          endpoints: [
+            { id: "EP-1", method: "POST", path: "/urls", request: "{target}", response: "{code}", errors: [] },
+          ],
+          storage_choices: [
+            {
+              id: "STO-1",
+              data: "URL mappings",
+              technology: "Cassandra",
+              justification: "",
+              rejected_alternatives: ["PostgreSQL"],
+              status: "proposed",
+            },
+          ],
+        }}
+      />,
+    );
+    const entities = panel(/^Entities/);
+    expect(within(entities).getByText("ENT-2")).toBeTruthy();
+    expect(entities.textContent).toContain("owner_id: uuidFK → ENT-1");
+    expect(entities.textContent).toContain("~500 bytes per record");
+    expect(panel(/Relationships/).textContent).toContain("User (ENT-1) 1:N Url (ENT-2)");
+    expect(within(panel(/API endpoints/)).getByText("EP-1")).toBeTruthy();
+    const storage = panel(/Storage choices/);
+    expect(within(storage).getByText("STO-1")).toBeTruthy();
+    expect(within(storage).getByText("proposed")).toBeTruthy();
+    expect(storage.textContent).toContain("Rejected: PostgreSQL");
   });
 });
 

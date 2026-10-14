@@ -8,6 +8,10 @@ export type Requirement = Schemas["Requirement"];
 export type NfrTarget = Schemas["NfrTarget"];
 export type Note = Schemas["Note"];
 export type Estimate = Schemas["Estimate"];
+export type Entity = Schemas["Entity"];
+export type Relationship = Schemas["Relationship"];
+export type Endpoint = Schemas["Endpoint"];
+export type StorageChoice = Schemas["StorageChoice"];
 
 export const EMPTY_DESIGN: Design = {
   functional_requirements: [],
