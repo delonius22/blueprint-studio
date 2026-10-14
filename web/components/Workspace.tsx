@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
+import { liveState } from "../lib/state";
+import { Canvas } from "./canvas/Canvas";
 import styles from "./Workspace.module.css";
 
 // The runtime keeps a thread's events in memory only. After a restart it has nothing to
@@ -27,9 +29,20 @@ function useThreadHistory(sessionId: string) {
   }, [copilotkit, agent, sessionId]);
 }
 
-function SessionChat({ sessionId }: { sessionId: string }) {
-  useThreadHistory(sessionId);
-  return <CopilotChat agentId={AGENT_NAME} threadId={sessionId} />;
+function WorkspaceBody({ session }: { session: SessionDetail }) {
+  useThreadHistory(session.id);
+  const { agent } = useAgent({ agentId: AGENT_NAME });
+  const state = liveState(agent.state, session.state);
+  return (
+    <div className={styles.body}>
+      <main className={styles.main}>
+        <Canvas design={state.design} />
+      </main>
+      <aside className={styles.chat} aria-label="Interview chat">
+        <CopilotChat agentId={AGENT_NAME} threadId={session.id} />
+      </aside>
+    </div>
+  );
 }
 
 export function Workspace({ sessionId }: { sessionId: string }) {
@@ -72,11 +85,7 @@ export function Workspace({ sessionId }: { sessionId: string }) {
           <Link href="/">Sessions</Link>
           <h1>{session.name}</h1>
         </header>
-        <div className={styles.body}>
-          <section className={styles.chat} aria-label="Interview chat">
-            <SessionChat sessionId={sessionId} />
-          </section>
-        </div>
+        <WorkspaceBody session={session} />
       </div>
     </CopilotKit>
   );

@@ -79,7 +79,7 @@ async def assemble(runtime: Runtime, pool: AsyncConnectionPool[Any]) -> FastAPI:
     await checkpointer.setup()
     store = SessionStore(pool)
     await store.setup()
-    graph = build_graph(runtime.models, checkpointer)
+    graph = build_graph(runtime.models, checkpointer, runtime.assets)
     app = create_app(graph, store)
     app.include_router(
         session_routes(

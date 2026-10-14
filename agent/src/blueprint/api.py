@@ -15,7 +15,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from blueprint.state import SESSION_FIELDS, new_session_state
+from blueprint.state import SESSION_FIELDS, SessionState, new_session_state
 from blueprint.store import InvalidCursor, SessionRow, SessionStore
 
 AGENT_NAME = "blueprint"
@@ -95,7 +95,7 @@ class SessionPage(BaseModel):
 
 
 class SessionDetail(SessionSummary):
-    state: dict[str, Any] = Field(
+    state: SessionState = Field(
         description="The session state (SPECS S2.2) without messages or CopilotKit's field"
     )
 
@@ -170,7 +170,8 @@ def session_routes(
     async def get_session(session_id: str) -> SessionDetail:
         row = await existing(session_id)
         snapshot = await graph.aget_state(config(session_id))
-        state = {k: v for k, v in snapshot.values.items() if k in SESSION_FIELDS}
+        values = {k: v for k, v in snapshot.values.items() if k in SESSION_FIELDS}
+        state = SessionState.model_validate(values)
         return SessionDetail(**summary(row).model_dump(), state=state)
 
     @router.patch("/{session_id}", response_model=SessionSummary, responses=errors(404, 422))

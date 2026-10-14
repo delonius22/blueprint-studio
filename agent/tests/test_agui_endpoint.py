@@ -22,9 +22,10 @@ from service import event_types as types
 from service import post_run, run_input
 
 from blueprint.app import create_app
+from blueprint.assets import load_assets
 from blueprint.graph import build_graph
 from blueprint.models import RoleModels
-from blueprint.state import DesignState
+from blueprint.state import DesignState, new_session_state
 
 CONFIRM_STEP = {
     "name": "confirm_step",
@@ -39,7 +40,12 @@ CONFIRM_STEP = {
 
 async def test_chat_reply_streams_through_the_agent_endpoint() -> None:
     interview = ScriptedChatModel.with_script(AIMessage("Who are the users of the system?"))
-    app = create_app(build_graph(RoleModels(interview, ScriptedChatModel()), InMemorySaver()))
+    graph = build_graph(RoleModels(interview, ScriptedChatModel()), InMemorySaver(), load_assets())
+    initial = new_session_state("t-stream", 1000, True)
+    await graph.aupdate_state(
+        {"configurable": {"thread_id": "t-stream"}}, initial, as_node="__start__"
+    )
+    app = create_app(graph)
 
     events = await post_run(
         app,

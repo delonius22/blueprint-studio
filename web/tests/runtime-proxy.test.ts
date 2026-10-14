@@ -114,7 +114,7 @@ describe("browser code", () => {
     }
     const workspace = readFileSync(join(root, "components", "Workspace.tsx"), "utf8");
     expect(workspace).toContain("runtimeUrl={RUNTIME_PATH}");
-    expect(workspace).toContain("threadId={sessionId}");
+    expect(workspace).toContain("threadId={session.id}");
     expect(RUNTIME_PATH).toBe("/api/copilotkit");
   });
 });

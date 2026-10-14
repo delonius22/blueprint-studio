@@ -45,6 +45,210 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CachePolicy */
+        CachePolicy: {
+            /** Data */
+            data: string;
+            /**
+             * Eviction
+             * @enum {string}
+             */
+            eviction: "LRU" | "LFU" | "TTL-only" | "other";
+            /** Id */
+            id: string;
+            /**
+             * Strategy
+             * @enum {string}
+             */
+            strategy: "cache-aside" | "read-through" | "write-through" | "write-back";
+            /** Ttl Seconds */
+            ttl_seconds?: number | null;
+        };
+        /** CapStance */
+        CapStance: {
+            /**
+             * Choice
+             * @enum {string}
+             */
+            choice: "CP" | "AP" | "mixed";
+            /** Rationale */
+            rationale: string;
+        };
+        /** Component */
+        Component: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "client" | "gateway" | "load_balancer" | "service" | "cache" | "queue" | "database" | "object_store" | "search" | "cdn" | "external";
+            /** Name */
+            name: string;
+            /** Responsibility */
+            responsibility: string;
+        };
+        /** Critique */
+        Critique: {
+            /** Bottlenecks */
+            bottlenecks: string[];
+            /** Questions */
+            questions: string[];
+            /** Step */
+            step: number;
+            /** Strengths */
+            strengths: string[];
+        };
+        /** Design */
+        Design: {
+            /**
+             * Cache Policies
+             * @default []
+             */
+            cache_policies: components["schemas"]["CachePolicy"][];
+            cap_stance?: components["schemas"]["CapStance"] | null;
+            /**
+             * Capacity Estimates
+             * @default []
+             */
+            capacity_estimates: components["schemas"]["Estimate"][];
+            /**
+             * Components
+             * @default []
+             */
+            components: components["schemas"]["Component"][];
+            /**
+             * Endpoints
+             * @default []
+             */
+            endpoints: components["schemas"]["Endpoint"][];
+            /**
+             * Entities
+             * @default []
+             */
+            entities: components["schemas"]["Entity"][];
+            /**
+             * Extensions
+             * @default []
+             */
+            extensions: components["schemas"]["Note"][];
+            /**
+             * Failure Modes
+             * @default []
+             */
+            failure_modes: components["schemas"]["FailureMode"][];
+            /**
+             * Flows
+             * @default []
+             */
+            flows: components["schemas"]["Flow"][];
+            /**
+             * Functional Requirements
+             * @default []
+             */
+            functional_requirements: components["schemas"]["Requirement"][];
+            /**
+             * Non Functional Requirements
+             * @default []
+             */
+            non_functional_requirements: components["schemas"]["NfrTarget"][];
+            /**
+             * Observability
+             * @default []
+             */
+            observability: components["schemas"]["Signal"][];
+            /**
+             * Out Of Scope
+             * @default []
+             */
+            out_of_scope: components["schemas"]["Note"][];
+            /**
+             * Relationships
+             * @default []
+             */
+            relationships: components["schemas"]["Relationship"][];
+            /**
+             * Spofs
+             * @default []
+             */
+            spofs: components["schemas"]["Spof"][];
+            /**
+             * Storage Choices
+             * @default []
+             */
+            storage_choices: components["schemas"]["StorageChoice"][];
+            /**
+             * Tradeoffs
+             * @default []
+             */
+            tradeoffs: components["schemas"]["Tradeoff"][];
+        };
+        /** DimensionScore */
+        DimensionScore: {
+            /** Advice */
+            advice: string;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "communication" | "structure" | "judgment" | "depth" | "time";
+            /** Evidence */
+            evidence: string[];
+            /** Score */
+            score: number;
+        };
+        /** Endpoint */
+        Endpoint: {
+            /**
+             * Errors
+             * @default []
+             */
+            errors: string[];
+            /** Id */
+            id: string;
+            /** Method */
+            method: string;
+            /** Pagination */
+            pagination?: string | null;
+            /** Path */
+            path: string;
+            /** Rate Limit */
+            rate_limit?: string | null;
+            /** Request */
+            request: string;
+            /** Response */
+            response: string;
+        };
+        /** Entity */
+        Entity: {
+            /** Est Record Bytes */
+            est_record_bytes?: number | null;
+            /** Fields */
+            fields: components["schemas"]["EntityField"][];
+            /** Id */
+            id: string;
+            /**
+             * Indexes
+             * @default []
+             */
+            indexes: string[];
+            /** Name */
+            name: string;
+        };
+        /** EntityField */
+        EntityField: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "pk" | "fk" | "none";
+            /** Name */
+            name: string;
+            /** References */
+            references?: string | null;
+            /** Type */
+            type: string;
+        };
         /** ErrorBody */
         ErrorBody: {
             error: components["schemas"]["ErrorDetail"];
@@ -55,6 +259,284 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /** ErrorInfo */
+        ErrorInfo: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Retryable */
+            retryable: boolean;
+        };
+        /** Estimate */
+        Estimate: {
+            /** Formula */
+            formula: string;
+            /** Id */
+            id: string;
+            /** Quantity */
+            quantity: string;
+            /** Result */
+            result: number;
+            /** Unit */
+            unit: string;
+        };
+        /** FailureMode */
+        FailureMode: {
+            /** Behaviour */
+            behaviour: string;
+            /** Id */
+            id: string;
+            /** Recovery */
+            recovery?: string | null;
+            /** Scenario */
+            scenario: string;
+        };
+        /** Feature */
+        Feature: {
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Requirement Ids */
+            requirement_ids: string[];
+        };
+        /** Flow */
+        Flow: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "read" | "write";
+            /** Name */
+            name: string;
+            /** Steps */
+            steps: components["schemas"]["FlowStep"][];
+        };
+        /** FlowStep */
+        FlowStep: {
+            /** From Component */
+            from_component: string;
+            /** Label */
+            label: string;
+            /** To Component */
+            to_component: string;
+        };
+        /** Gap */
+        Gap: {
+            /** Decision Needed */
+            decision_needed: string;
+            /**
+             * Feature Ids
+             * @default []
+             */
+            feature_ids: string[];
+            /** Id */
+            id: string;
+            /** Item Ids */
+            item_ids: string[];
+            /**
+             * Lens
+             * @enum {string}
+             */
+            lens: "security" | "efficiency" | "maintainability";
+            /** Note */
+            note?: string | null;
+            /**
+             * Resolved By
+             * @default []
+             */
+            resolved_by: string[];
+            /** Risk */
+            risk: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "high" | "medium" | "low";
+            /**
+             * Status
+             * @default open
+             * @enum {string}
+             */
+            status: "open" | "resolved" | "accepted";
+        };
+        /** NfrTarget */
+        NfrTarget: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "latency" | "throughput" | "availability" | "durability" | "scale" | "security" | "cost" | "other";
+            /** Id */
+            id: string;
+            /** Metric */
+            metric?: string | null;
+            /** Statement */
+            statement: string;
+            /** Target */
+            target?: number | null;
+            /** Unit */
+            unit?: string | null;
+        };
+        /** Note */
+        Note: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
+        /** PrdDoc */
+        PrdDoc: {
+            /** Features */
+            features: components["schemas"]["Feature"][];
+            /** Functional Requirements */
+            functional_requirements: components["schemas"]["PrdRequirement"][];
+            /**
+             * Further Notes
+             * @default []
+             */
+            further_notes: string[];
+            /** Goals */
+            goals: string[];
+            /**
+             * Implementation Decisions
+             * @default []
+             */
+            implementation_decisions: string[];
+            /** Non Functional Requirements */
+            non_functional_requirements: components["schemas"]["PrdNfr"][];
+            /** Open Gaps */
+            open_gaps: components["schemas"]["Gap"][];
+            /** Out Of Scope */
+            out_of_scope: string[];
+            /** Problem Statement */
+            problem_statement: string;
+            /** Scope */
+            scope: string[];
+            /**
+             * Solution
+             * @default
+             */
+            solution: string;
+            /**
+             * Testing Decisions
+             * @default []
+             */
+            testing_decisions: string[];
+            /**
+             * User Stories
+             * @default []
+             */
+            user_stories: components["schemas"]["UserStory"][];
+            /** Users */
+            users: string[];
+        };
+        /** PrdNfr */
+        PrdNfr: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "latency" | "throughput" | "availability" | "durability" | "scale" | "security" | "cost" | "other";
+            /** Id */
+            id: string;
+            /** Metric */
+            metric?: string | null;
+            /** Statement */
+            statement: string;
+            /** Target */
+            target?: number | null;
+            /** Unit */
+            unit?: string | null;
+        };
+        /** PrdRequirement */
+        PrdRequirement: {
+            /** Feature Id */
+            feature_id: string;
+            /** Id */
+            id: string;
+            /** Statement */
+            statement: string;
+        };
+        /** PrdVersion */
+        PrdVersion: {
+            /** Approved At */
+            approved_at: string;
+            doc: components["schemas"]["PrdDoc"];
+            /**
+             * Version
+             * @enum {string}
+             */
+            version: "1.0" | "1.1" | "1.2";
+        };
+        /** ProposedChange */
+        ProposedChange: {
+            /** Current Text */
+            current_text?: string | null;
+            /**
+             * Decision
+             * @default pending
+             * @enum {string}
+             */
+            decision: "pending" | "approved" | "rejected";
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "add" | "modify" | "remove";
+            /** Proposed Text */
+            proposed_text?: string | null;
+            /** Reason */
+            reason: string;
+            /** Section */
+            section: string;
+            /** Target Id */
+            target_id?: string | null;
+        };
+        /** Relationship */
+        Relationship: {
+            /**
+             * Cardinality
+             * @enum {string}
+             */
+            cardinality: "1:1" | "1:N" | "N:M";
+            /** From Entity */
+            from_entity: string;
+            /** Id */
+            id: string;
+            /** To Entity */
+            to_entity: string;
+        };
+        /** Requirement */
+        Requirement: {
+            /** Id */
+            id: string;
+            /** Statement */
+            statement: string;
+        };
+        /** Scorecard */
+        Scorecard: {
+            /** Dimensions */
+            dimensions: components["schemas"]["DimensionScore"][];
+        };
+        /** Seam */
+        Seam: {
+            /** Covers */
+            covers: string[];
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** SessionDetail */
         SessionDetail: {
@@ -71,13 +553,8 @@ export interface components {
             name: string;
             /** Stage */
             stage: string;
-            /**
-             * State
-             * @description The session state (SPECS S2.2) without messages or CopilotKit's field
-             */
-            state: {
-                [key: string]: unknown;
-            };
+            /** @description The session state (SPECS S2.2) without messages or CopilotKit's field */
+            state: components["schemas"]["SessionState"];
             /**
              * Updated At
              * Format: date-time
@@ -99,6 +576,54 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /**
+         * SessionState
+         * @description The session fields of DesignState as a typed model (S2.2), for the REST API and validation.
+         */
+        SessionState: {
+            agent_design: components["schemas"]["Design"] | null;
+            /** Confirmed Steps */
+            confirmed_steps: number[];
+            /** Critiques */
+            critiques: components["schemas"]["Critique"][];
+            /** Current Step */
+            current_step: number;
+            design: components["schemas"]["Design"];
+            /** Gaps */
+            gaps: components["schemas"]["Gap"][];
+            /** Id Counters */
+            id_counters: {
+                [key: string]: number;
+            };
+            last_error: components["schemas"]["ErrorInfo"] | null;
+            prd_draft: components["schemas"]["PrdDoc"] | null;
+            /** Prd Versions */
+            prd_versions: components["schemas"]["PrdVersion"][];
+            /** Proposed Changes */
+            proposed_changes: components["schemas"]["ProposedChange"][];
+            /** Review Model Distinct */
+            review_model_distinct: boolean;
+            scorecard: components["schemas"]["Scorecard"] | null;
+            /** Seams */
+            seams: components["schemas"]["Seam"][];
+            /** Session Id */
+            session_id: string;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "interview" | "design_review" | "gap_resolution" | "prd_draft" | "prd_signoff" | "spec_synthesis" | "seam_gate" | "change_review" | "ticket_breakdown" | "ticket_gate" | "complete";
+            /** Tickets */
+            tickets: components["schemas"]["Ticket"][];
+            /** Tickets Approved At */
+            tickets_approved_at: string | null;
+            /** Token Budget */
+            token_budget: number;
+            /** Tokens Used */
+            tokens_used: {
+                [key: string]: number;
+            };
+        };
         /** SessionSummary */
         SessionSummary: {
             /**
@@ -119,6 +644,104 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** Signal */
+        Signal: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "log" | "metric" | "trace" | "alert" | "health-check";
+            /** Name */
+            name: string;
+            /** Threshold */
+            threshold?: string | null;
+        };
+        /** Spof */
+        Spof: {
+            /** Component Id */
+            component_id: string;
+            /** Id */
+            id: string;
+            /** Mitigation */
+            mitigation?: string | null;
+            /** Risk */
+            risk: string;
+        };
+        /** StorageChoice */
+        StorageChoice: {
+            /** Data */
+            data: string;
+            /** Id */
+            id: string;
+            /** Justification */
+            justification: string;
+            /**
+             * Rejected Alternatives
+             * @default []
+             */
+            rejected_alternatives: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "proposed" | "decided";
+            /** Technology */
+            technology: string;
+        };
+        /** Ticket */
+        Ticket: {
+            /** Acceptance Criteria */
+            acceptance_criteria: string[];
+            /**
+             * Blocked By
+             * @default []
+             */
+            blocked_by: string[];
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @default slice
+             * @enum {string}
+             */
+            kind: "slice" | "prefactor" | "expand" | "migrate" | "contract";
+            /** Story Ids */
+            story_ids: string[];
+            /** Title */
+            title: string;
+            /** What To Build */
+            what_to_build: string;
+        };
+        /** Tradeoff */
+        Tradeoff: {
+            /** Decision */
+            decision: string;
+            /** Gained */
+            gained: string;
+            /** Id */
+            id: string;
+            /** Sacrificed */
+            sacrificed: string;
+        };
+        /** UserStory */
+        UserStory: {
+            /** Acceptance Criteria */
+            acceptance_criteria: string[];
+            /** Actor */
+            actor: string;
+            /** Benefit */
+            benefit: string;
+            /** Feature */
+            feature: string;
+            /** Feature Id */
+            feature_id: string;
+            /** Id */
+            id: string;
+            /** Requirement Ids */
+            requirement_ids: string[];
         };
     };
     responses: never;

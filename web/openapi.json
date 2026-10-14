@@ -1,6 +1,508 @@
 {
   "components": {
     "schemas": {
+      "CachePolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "minLength": 1,
+            "title": "Data",
+            "type": "string"
+          },
+          "eviction": {
+            "enum": [
+              "LRU",
+              "LFU",
+              "TTL-only",
+              "other"
+            ],
+            "title": "Eviction",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "strategy": {
+            "enum": [
+              "cache-aside",
+              "read-through",
+              "write-through",
+              "write-back"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl Seconds"
+          }
+        },
+        "required": [
+          "id",
+          "data",
+          "strategy",
+          "eviction"
+        ],
+        "title": "CachePolicy",
+        "type": "object"
+      },
+      "CapStance": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "enum": [
+              "CP",
+              "AP",
+              "mixed"
+            ],
+            "title": "Choice",
+            "type": "string"
+          },
+          "rationale": {
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "choice",
+          "rationale"
+        ],
+        "title": "CapStance",
+        "type": "object"
+      },
+      "Component": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "client",
+              "gateway",
+              "load_balancer",
+              "service",
+              "cache",
+              "queue",
+              "database",
+              "object_store",
+              "search",
+              "cdn",
+              "external"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "responsibility": {
+            "title": "Responsibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "responsibility"
+        ],
+        "title": "Component",
+        "type": "object"
+      },
+      "Critique": {
+        "additionalProperties": false,
+        "properties": {
+          "bottlenecks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bottlenecks",
+            "type": "array"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "step": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Step",
+            "type": "integer"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Strengths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "step",
+          "strengths",
+          "bottlenecks",
+          "questions"
+        ],
+        "title": "Critique",
+        "type": "object"
+      },
+      "Design": {
+        "additionalProperties": false,
+        "properties": {
+          "cache_policies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CachePolicy"
+            },
+            "title": "Cache Policies",
+            "type": "array"
+          },
+          "cap_stance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CapStance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capacity_estimates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Estimate"
+            },
+            "title": "Capacity Estimates",
+            "type": "array"
+          },
+          "components": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Component"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "endpoints": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Endpoint"
+            },
+            "title": "Endpoints",
+            "type": "array"
+          },
+          "entities": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Entity"
+            },
+            "title": "Entities",
+            "type": "array"
+          },
+          "extensions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            },
+            "title": "Extensions",
+            "type": "array"
+          },
+          "failure_modes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FailureMode"
+            },
+            "title": "Failure Modes",
+            "type": "array"
+          },
+          "flows": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Flow"
+            },
+            "title": "Flows",
+            "type": "array"
+          },
+          "functional_requirements": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            },
+            "title": "Functional Requirements",
+            "type": "array"
+          },
+          "non_functional_requirements": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NfrTarget"
+            },
+            "title": "Non Functional Requirements",
+            "type": "array"
+          },
+          "observability": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Signal"
+            },
+            "title": "Observability",
+            "type": "array"
+          },
+          "out_of_scope": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            },
+            "title": "Out Of Scope",
+            "type": "array"
+          },
+          "relationships": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Relationship"
+            },
+            "title": "Relationships",
+            "type": "array"
+          },
+          "spofs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Spof"
+            },
+            "title": "Spofs",
+            "type": "array"
+          },
+          "storage_choices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StorageChoice"
+            },
+            "title": "Storage Choices",
+            "type": "array"
+          },
+          "tradeoffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Tradeoff"
+            },
+            "title": "Tradeoffs",
+            "type": "array"
+          }
+        },
+        "title": "Design",
+        "type": "object"
+      },
+      "DimensionScore": {
+        "additionalProperties": false,
+        "properties": {
+          "advice": {
+            "title": "Advice",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "communication",
+              "structure",
+              "judgment",
+              "depth",
+              "time"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "score": {
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dimension",
+          "score",
+          "evidence",
+          "advice"
+        ],
+        "title": "DimensionScore",
+        "type": "object"
+      },
+      "Endpoint": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "minLength": 1,
+            "title": "Method",
+            "type": "string"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagination"
+          },
+          "path": {
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "rate_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "response": {
+            "title": "Response",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "method",
+          "path",
+          "request",
+          "response"
+        ],
+        "title": "Endpoint",
+        "type": "object"
+      },
+      "Entity": {
+        "additionalProperties": false,
+        "properties": {
+          "est_record_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Est Record Bytes"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/EntityField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "indexes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Indexes",
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "fields"
+        ],
+        "title": "Entity",
+        "type": "object"
+      },
+      "EntityField": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "enum": [
+              "pk",
+              "fk",
+              "none"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "references": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "References"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "key"
+        ],
+        "title": "EntityField",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -31,6 +533,801 @@
         "title": "ErrorDetail",
         "type": "object"
       },
+      "ErrorInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "ErrorInfo",
+        "type": "object"
+      },
+      "Estimate": {
+        "additionalProperties": false,
+        "properties": {
+          "formula": {
+            "minLength": 1,
+            "title": "Formula",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "quantity": {
+            "minLength": 1,
+            "title": "Quantity",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "number"
+          },
+          "unit": {
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "quantity",
+          "formula",
+          "result",
+          "unit"
+        ],
+        "title": "Estimate",
+        "type": "object"
+      },
+      "FailureMode": {
+        "additionalProperties": false,
+        "properties": {
+          "behaviour": {
+            "minLength": 1,
+            "title": "Behaviour",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "recovery": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery"
+          },
+          "scenario": {
+            "minLength": 1,
+            "title": "Scenario",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scenario",
+          "behaviour"
+        ],
+        "title": "FailureMode",
+        "type": "object"
+      },
+      "Feature": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "requirement_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Requirement Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "requirement_ids"
+        ],
+        "title": "Feature",
+        "type": "object"
+      },
+      "Flow": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "read",
+              "write"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/FlowStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "steps"
+        ],
+        "title": "Flow",
+        "type": "object"
+      },
+      "FlowStep": {
+        "additionalProperties": false,
+        "properties": {
+          "from_component": {
+            "title": "From Component",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "to_component": {
+            "title": "To Component",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_component",
+          "to_component",
+          "label"
+        ],
+        "title": "FlowStep",
+        "type": "object"
+      },
+      "Gap": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_needed": {
+            "minLength": 1,
+            "title": "Decision Needed",
+            "type": "string"
+          },
+          "feature_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Feature Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Item Ids",
+            "type": "array"
+          },
+          "lens": {
+            "enum": [
+              "security",
+              "efficiency",
+              "maintainability"
+            ],
+            "title": "Lens",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "resolved_by": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Resolved By",
+            "type": "array"
+          },
+          "risk": {
+            "minLength": 1,
+            "title": "Risk",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "default": "open",
+            "enum": [
+              "open",
+              "resolved",
+              "accepted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lens",
+          "item_ids",
+          "risk",
+          "decision_needed",
+          "severity"
+        ],
+        "title": "Gap",
+        "type": "object"
+      },
+      "NfrTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "latency",
+              "throughput",
+              "availability",
+              "durability",
+              "scale",
+              "security",
+              "cost",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "statement"
+        ],
+        "title": "NfrTarget",
+        "type": "object"
+      },
+      "Note": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "Note",
+        "type": "object"
+      },
+      "PrdDoc": {
+        "additionalProperties": false,
+        "properties": {
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "functional_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/PrdRequirement"
+            },
+            "title": "Functional Requirements",
+            "type": "array"
+          },
+          "further_notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Further Notes",
+            "type": "array"
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "implementation_decisions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Implementation Decisions",
+            "type": "array"
+          },
+          "non_functional_requirements": {
+            "items": {
+              "$ref": "#/components/schemas/PrdNfr"
+            },
+            "title": "Non Functional Requirements",
+            "type": "array"
+          },
+          "open_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            },
+            "title": "Open Gaps",
+            "type": "array"
+          },
+          "out_of_scope": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Out Of Scope",
+            "type": "array"
+          },
+          "problem_statement": {
+            "title": "Problem Statement",
+            "type": "string"
+          },
+          "scope": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scope",
+            "type": "array"
+          },
+          "solution": {
+            "default": "",
+            "title": "Solution",
+            "type": "string"
+          },
+          "testing_decisions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Testing Decisions",
+            "type": "array"
+          },
+          "user_stories": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/UserStory"
+            },
+            "title": "User Stories",
+            "type": "array"
+          },
+          "users": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Users",
+            "type": "array"
+          }
+        },
+        "required": [
+          "problem_statement",
+          "goals",
+          "users",
+          "features",
+          "functional_requirements",
+          "non_functional_requirements",
+          "scope",
+          "out_of_scope",
+          "open_gaps"
+        ],
+        "title": "PrdDoc",
+        "type": "object"
+      },
+      "PrdNfr": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "latency",
+              "throughput",
+              "availability",
+              "durability",
+              "scale",
+              "security",
+              "cost",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "statement"
+        ],
+        "title": "PrdNfr",
+        "type": "object"
+      },
+      "PrdRequirement": {
+        "additionalProperties": false,
+        "properties": {
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "feature_id",
+          "statement"
+        ],
+        "title": "PrdRequirement",
+        "type": "object"
+      },
+      "PrdVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "title": "Approved At",
+            "type": "string"
+          },
+          "doc": {
+            "$ref": "#/components/schemas/PrdDoc"
+          },
+          "version": {
+            "enum": [
+              "1.0",
+              "1.1",
+              "1.2"
+            ],
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "approved_at",
+          "doc"
+        ],
+        "title": "PrdVersion",
+        "type": "object"
+      },
+      "ProposedChange": {
+        "additionalProperties": false,
+        "properties": {
+          "current_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Text"
+          },
+          "decision": {
+            "default": "pending",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "add",
+              "modify",
+              "remove"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "proposed_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Text"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "kind",
+          "reason"
+        ],
+        "title": "ProposedChange",
+        "type": "object"
+      },
+      "Relationship": {
+        "additionalProperties": false,
+        "properties": {
+          "cardinality": {
+            "enum": [
+              "1:1",
+              "1:N",
+              "N:M"
+            ],
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "from_entity": {
+            "title": "From Entity",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "to_entity": {
+            "title": "To Entity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "from_entity",
+          "to_entity",
+          "cardinality"
+        ],
+        "title": "Relationship",
+        "type": "object"
+      },
+      "Requirement": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement"
+        ],
+        "title": "Requirement",
+        "type": "object"
+      },
+      "Scorecard": {
+        "additionalProperties": false,
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionScore"
+            },
+            "maxItems": 5,
+            "minItems": 5,
+            "title": "Dimensions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dimensions"
+        ],
+        "title": "Scorecard",
+        "type": "object"
+      },
+      "Seam": {
+        "additionalProperties": false,
+        "properties": {
+          "covers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Covers",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "covers"
+        ],
+        "title": "Seam",
+        "type": "object"
+      },
       "SessionDetail": {
         "properties": {
           "created_at": {
@@ -55,10 +1352,8 @@
             "type": "string"
           },
           "state": {
-            "additionalProperties": true,
-            "description": "The session state (SPECS S2.2) without messages or CopilotKit's field",
-            "title": "State",
-            "type": "object"
+            "$ref": "#/components/schemas/SessionState",
+            "description": "The session state (SPECS S2.2) without messages or CopilotKit's field"
           },
           "updated_at": {
             "format": "date-time",
@@ -121,6 +1416,186 @@
         "title": "SessionPage",
         "type": "object"
       },
+      "SessionState": {
+        "additionalProperties": false,
+        "description": "The session fields of DesignState as a typed model (S2.2), for the REST API and validation.",
+        "properties": {
+          "agent_design": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Design"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confirmed_steps": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Confirmed Steps",
+            "type": "array"
+          },
+          "critiques": {
+            "items": {
+              "$ref": "#/components/schemas/Critique"
+            },
+            "title": "Critiques",
+            "type": "array"
+          },
+          "current_step": {
+            "title": "Current Step",
+            "type": "integer"
+          },
+          "design": {
+            "$ref": "#/components/schemas/Design"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "id_counters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Id Counters",
+            "type": "object"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prd_draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrdDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prd_versions": {
+            "items": {
+              "$ref": "#/components/schemas/PrdVersion"
+            },
+            "title": "Prd Versions",
+            "type": "array"
+          },
+          "proposed_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedChange"
+            },
+            "title": "Proposed Changes",
+            "type": "array"
+          },
+          "review_model_distinct": {
+            "title": "Review Model Distinct",
+            "type": "boolean"
+          },
+          "scorecard": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scorecard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seams": {
+            "items": {
+              "$ref": "#/components/schemas/Seam"
+            },
+            "title": "Seams",
+            "type": "array"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "interview",
+              "design_review",
+              "gap_resolution",
+              "prd_draft",
+              "prd_signoff",
+              "spec_synthesis",
+              "seam_gate",
+              "change_review",
+              "ticket_breakdown",
+              "ticket_gate",
+              "complete"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/Ticket"
+            },
+            "title": "Tickets",
+            "type": "array"
+          },
+          "tickets_approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tickets Approved At"
+          },
+          "token_budget": {
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "tokens_used": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Tokens Used",
+            "type": "object"
+          }
+        },
+        "required": [
+          "session_id",
+          "stage",
+          "current_step",
+          "confirmed_steps",
+          "design",
+          "agent_design",
+          "critiques",
+          "scorecard",
+          "gaps",
+          "review_model_distinct",
+          "prd_draft",
+          "prd_versions",
+          "proposed_changes",
+          "seams",
+          "tickets",
+          "tickets_approved_at",
+          "id_counters",
+          "tokens_used",
+          "token_budget",
+          "last_error"
+        ],
+        "title": "SessionState",
+        "type": "object"
+      },
       "SessionSummary": {
         "properties": {
           "created_at": {
@@ -159,6 +1634,283 @@
           "updated_at"
         ],
         "title": "SessionSummary",
+        "type": "object"
+      },
+      "Signal": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "log",
+              "metric",
+              "trace",
+              "alert",
+              "health-check"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "Spof": {
+        "additionalProperties": false,
+        "properties": {
+          "component_id": {
+            "title": "Component Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mitigation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mitigation"
+          },
+          "risk": {
+            "minLength": 1,
+            "title": "Risk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "component_id",
+          "risk"
+        ],
+        "title": "Spof",
+        "type": "object"
+      },
+      "StorageChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "minLength": 1,
+            "title": "Data",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "justification": {
+            "title": "Justification",
+            "type": "string"
+          },
+          "rejected_alternatives": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Rejected Alternatives",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "decided"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "technology": {
+            "minLength": 1,
+            "title": "Technology",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "data",
+          "technology",
+          "justification",
+          "status"
+        ],
+        "title": "StorageChoice",
+        "type": "object"
+      },
+      "Ticket": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptance_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Acceptance Criteria",
+            "type": "array"
+          },
+          "blocked_by": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocked By",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "slice",
+            "enum": [
+              "slice",
+              "prefactor",
+              "expand",
+              "migrate",
+              "contract"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "story_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Story Ids",
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "what_to_build": {
+            "minLength": 1,
+            "title": "What To Build",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "what_to_build",
+          "acceptance_criteria",
+          "story_ids"
+        ],
+        "title": "Ticket",
+        "type": "object"
+      },
+      "Tradeoff": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "minLength": 1,
+            "title": "Decision",
+            "type": "string"
+          },
+          "gained": {
+            "minLength": 1,
+            "title": "Gained",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "sacrificed": {
+            "minLength": 1,
+            "title": "Sacrificed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "decision",
+          "gained",
+          "sacrificed"
+        ],
+        "title": "Tradeoff",
+        "type": "object"
+      },
+      "UserStory": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptance_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Acceptance Criteria",
+            "type": "array"
+          },
+          "actor": {
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
+          "benefit": {
+            "minLength": 1,
+            "title": "Benefit",
+            "type": "string"
+          },
+          "feature": {
+            "minLength": 1,
+            "title": "Feature",
+            "type": "string"
+          },
+          "feature_id": {
+            "title": "Feature Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requirement_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Requirement Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "feature_id",
+          "actor",
+          "feature",
+          "benefit",
+          "acceptance_criteria",
+          "requirement_ids"
+        ],
+        "title": "UserStory",
         "type": "object"
       }
     }

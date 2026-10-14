@@ -267,3 +267,9 @@ async def test_checked_in_rest_contract_matches_the_service(pool: AsyncConnectio
     assert {k: v for k, v in served["paths"].items() if k.startswith("/api/")} == exported["paths"]
     for name, schema in exported["components"]["schemas"].items():
         assert served["components"]["schemas"][name] == schema
+
+
+def test_session_state_model_matches_design_state() -> None:
+    from blueprint.state import SessionState
+
+    assert set(SessionState.model_fields) == set(SESSION_FIELDS)

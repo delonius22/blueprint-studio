@@ -75,14 +75,14 @@
 
 **Delivers stories:** US-5, US-6, US-7, US-10, US-12
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The design record and its Step 1 item types exist as S2.4, S2.5, S2.6, S2.7 and S2.15 define.
-- [ ] The interviewer's system prompt is assembled as S5.2 defines, from `app-assets/` files.
-- [ ] Backend tools record requirements, NFR targets, out-of-scope notes and estimates with IDs that are never reused, executed by the `design_tools` node (S5.1, S5.3).
-- [ ] A graph-seam test shows that asking to "add a Redis cache" during Step 1 records nothing architectural (S5.4).
-- [ ] Estimates keep their formula as well as their result (S2.7).
-- [ ] The canvas shows Step 1 panels with item IDs, updating live (S11.2, S11.3).
+- [x] The design record and its Step 1 item types exist as S2.4, S2.5, S2.6, S2.7 and S2.15 define.
+- [x] The interviewer's system prompt is assembled as S5.2 defines, from `app-assets/` files.
+- [x] Backend tools record requirements, NFR targets, out-of-scope notes and estimates with IDs that are never reused, executed by the `design_tools` node (S5.1, S5.3).
+- [x] A graph-seam test shows that asking to "add a Redis cache" during Step 1 records nothing architectural (S5.4).
+- [x] Estimates keep their formula as well as their result (S2.7).
+- [x] The canvas shows Step 1 panels with item IDs, updating live (S11.2, S11.3).
 
 ---
 

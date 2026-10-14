@@ -23,11 +23,30 @@
   min-height: 0;
 }
 
-.chat {
-  display: flex;
+.main {
   flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.chat {
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex: 0 0 min(32rem, 45%);
   flex-direction: column;
   min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .chat {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    flex-basis: 50%;
+  }
 }
 
 .message {

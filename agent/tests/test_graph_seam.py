@@ -1,7 +1,7 @@
 """T-01: the graph seam works with two scripted fake models before any feature exists."""
 
 from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from seam import GraphSeam
 
 
@@ -21,7 +21,12 @@ async def test_interview_model_answers_and_the_thread_keeps_history() -> None:
         "Mostly anonymous web users",
         "What read/write ratio?",
     ]
-    assert [type(m) for m in interview.calls[1].messages] == [HumanMessage, AIMessage, HumanMessage]
+    assert [type(m) for m in interview.calls[1].messages] == [
+        SystemMessage,
+        HumanMessage,
+        AIMessage,
+        HumanMessage,
+    ]
     assert review.calls == []
 
 
