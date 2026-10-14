@@ -1,9 +1,11 @@
 ---
 id: TASK-8
 title: 'T-08: Steps 4–5 and the final scorecard'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-14 22:19'
+updated_date: '2026-10-14 23:21'
 labels: []
 dependencies:
   - TASK-7
@@ -29,3 +31,9 @@ Mirrors T-08 in TICKETS.md, which is authoritative.
 - [ ] #3 After Step 5 approval the critic stores a scorecard with five dimension scores, quoted evidence and advice, and sets `stage` to `design_review` (S5.8, S2.8).
 - [ ] #4 The scorecard is shown in the workspace.
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Blocked on Q-10 (PRD OQ-6: may scorecard evidence quote the interviewer's turns or only the user's?). Implementation complete on branch T-08 with the rule as scoring.QUOTES_FROM; 108 agent / 27 web tests green there.
+<!-- SECTION:NOTES:END -->

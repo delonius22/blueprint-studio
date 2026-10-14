@@ -162,7 +162,7 @@
 
 **Delivers stories:** US-16
 
-**Status:** ready-for-agent
+**Status:** blocked-on-question
 
 - [ ] SPOF, signal, trade-off and extension types and tools exist (S2.7, S5.3).
 - [ ] Confirming Step 4 with no SPOF, or an unmitigated SPOF, returns the blocker and opens no card (S5.6).
