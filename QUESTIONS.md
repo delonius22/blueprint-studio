@@ -57,3 +57,9 @@ Versions were checked against PyPI and npm on 2026-10-14. Every version pinned i
 **Question:** `openapi-typescript`, which generates the frontend's REST types, needs the TypeScript 5 compiler API, which TypeScript 7.0.2 (the native compiler) does not ship. npm cannot install it beside the pinned TypeScript 7.
 **Options:** (a) Downgrade the app to TypeScript 5: contradicts D13. (b) Keep the app on 7.0.2 and run the generator from its own pinned tool package (`web/tools/openapi`, TypeScript 5.9.3) that is not part of the app's build.
 **Resolution (D13 consequence, settled):** (b). A test checks that the checked-in types equal the generator's output for the checked-in `openapi.json`, and another that `openapi.json` equals the service's document.
+
+## Q-10 — T-08
+**Clauses:** PRD OQ-6, FR-9, G5, SPECS S2.8, S5.8, T-08 AC 3
+**Question:** T-08 requires the Step 5 scorecard to back each of the five dimension scores with "quoted evidence" from the session. PRD OQ-6 leaves open whether that evidence may quote the interviewer's (assistant's) turns or only the user's, and no ticket settles it.
+**Options:** (a) User turns only: the scorecard grades the user, so every evidence string must be a verbatim quote of something the user wrote; the app can enforce this by rejecting (and retrying once) a scorecard whose quotes are not found in the user's messages. Consequence: a dimension where the user said little gets sparse evidence. (b) Any turn: evidence may quote the user or the interviewer (for example, a question the user left unanswered), still verbatim from the transcript. Consequence: richer evidence, but a score can rest on the interviewer's words rather than the user's.
+**Status:** open. T-08 is `blocked-on-question`; its implementation is complete on branch `T-08` with the rule as a single setting, so either answer is a one-line change plus its test. T-09 to T-18 and T-20 depend on T-08 and wait with it.
