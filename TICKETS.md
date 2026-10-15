@@ -252,13 +252,13 @@
 
 **Delivers stories:** US-28, US-29, US-31, US-36
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The `spec_synthesizer` prompt and output behave as S8.1 defines, using `app-assets/to-spec.md` verbatim.
-- [ ] A graph-seam test shows the signed-off sections of `prd_draft` are byte-identical to v1.0 after synthesis, and every open gap appears in further notes with its ID (S8.1).
-- [ ] `UserStory` exists as S2.11 defines; validation and its one retry behave as S8.2 defines, including that every FR is covered by a story.
-- [ ] `approve_seams` approve, edit and reject behave as S8.3; approval appends v1.1 and routes as S8.4 defines.
-- [ ] `prd-v1.1.docx` renders as S10.4 defines and ends with the attribution line of S12.3.
+- [x] The `spec_synthesizer` prompt and output behave as S8.1 defines, using `app-assets/to-spec.md` verbatim.
+- [x] A graph-seam test shows the signed-off sections of `prd_draft` are byte-identical to v1.0 after synthesis, and every open gap appears in further notes with its ID (S8.1).
+- [x] `UserStory` exists as S2.11 defines; validation and its one retry behave as S8.2 defines, including that every FR is covered by a story.
+- [x] `approve_seams` approve, edit and reject behave as S8.3; approval appends v1.1 and routes as S8.4 defines.
+- [x] `prd-v1.1.docx` renders as S10.4 defines and ends with the attribution line of S12.3.
 
 ---
 

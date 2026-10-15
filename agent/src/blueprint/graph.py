@@ -24,9 +24,10 @@ from blueprint.design import (
     step_blockers,
     tool_schemas,
 )
-from blueprint.domain import Critique, Design, Gap, Model, PrdDoc, PrdVersion, Scorecard
+from blueprint.domain import Critique, Design, Gap, Model, PrdDoc, PrdVersion, Scorecard, Seam
 from blueprint.edits import edit_note
 from blueprint.gates import (
+    APPROVE_SEAMS,
     CONFIRM_STEP,
     DECIDE_GAPS,
     GATES,
@@ -56,6 +57,18 @@ from blueprint.review import (
     reviewer_messages,
 )
 from blueprint.scoring import ScorecardError, make_scorecard
+from blueprint.spec import (
+    SeamsOut,
+    SpecOut,
+    approved_seams,
+    build_v1_1_draft,
+    issue_seams,
+    seam_decision,
+    seam_messages,
+    seam_problems,
+    spec_problems,
+    synthesizer_messages,
+)
 from blueprint.state import DesignState
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]
@@ -153,9 +166,16 @@ def route_start(state: DesignState) -> str | list[str]:
             return "critic"
         if name == SIGN_OFF_PRD:
             return "prd_drafter"  # S7.3, S7.4
+        if name == APPROVE_SEAMS:
+            return "seam_proposer"  # S8.3, S8.4
         return "interviewer"
-    if state.get("stage") == "prd_draft":
+    stage = state.get("stage")
+    if stage == "prd_draft":
         return "prd_drafter"
+    if stage == "spec_synthesis":
+        return "spec_synthesizer"
+    if stage == "seam_gate" and not state.get("seams"):
+        return "seam_proposer"  # a card already waiting is never proposed twice
     if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
@@ -179,6 +199,17 @@ def route_interviewer(state: DesignState) -> str:
     if state.get("stage") == "prd_draft":
         return "prd_drafter"
     return END
+
+
+def route_prd_drafter(state: DesignState) -> str:
+    """Sign-off starts the to-spec synthesis (S7.4, S8.1)."""
+    if not state.get("last_error") and state.get("stage") == "spec_synthesis":
+        return "spec_synthesizer"
+    return END
+
+
+def route_spec_synthesizer(state: DesignState) -> str:
+    return END if state.get("last_error") else "seam_proposer"
 
 
 def route_gap_merger(state: DesignState) -> str:
@@ -583,6 +614,122 @@ def build_graph(
             "messages": [message],
         }
 
+    async def structured_with_retry(
+        meter: Meter, schema: Any, prompt: list[Any], check: Any, config: RunnableConfig
+    ) -> Any:
+        """One structured call plus one corrective retry; returns (output, problems)."""
+        problems: list[str] = []
+        out = None
+        for _attempt in range(2):
+            try:
+                out = await calls.structured(meter, "interview", schema, prompt, config)
+                problems = check(out)
+            except InvalidStructuredOutput as invalid:
+                problems = [str(invalid)]
+            if not problems:
+                break
+            prompt = [
+                *prompt,
+                HumanMessage(
+                    "Your answer could not be used. Fix these and answer again:\n- "
+                    + "\n- ".join(problems)
+                ),
+            ]
+        return out, problems
+
+    async def spec_synthesizer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
+        """S8.1, S8.2: extend the signed-off PRD into the v1.1 draft with to-spec."""
+        signed = PrdDoc.model_validate(state["prd_versions"][-1]["doc"])
+        design = Design.model_validate(state["design"])
+        counters = dict(state["id_counters"])
+        meter = Meter.for_node(state, "spec_synthesizer")
+        prompt = synthesizer_messages(assets, signed, design, list(state["messages"]))
+        try:
+            out, problems = await structured_with_retry(
+                meter, SpecOut, prompt, lambda o: spec_problems(o, signed), config
+            )
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}
+        if problems:
+            error = ModelCallFailed(
+                "invalid_output",
+                "The PRD v1.1 synthesis broke its rules: " + "; ".join(problems),
+                retryable=True,
+            )
+            return {"last_error": error.info(), "tokens_used": meter.used}
+        draft, changes = build_v1_1_draft(out, signed, counters)
+        return {
+            "prd_draft": draft.model_dump(mode="json"),
+            "proposed_changes": [c.model_dump(mode="json") for c in changes],
+            "seams": [],
+            "id_counters": counters,
+            "stage": "seam_gate",
+            "tokens_used": meter.used,
+            "last_error": None,
+        }
+
+    async def seam_proposer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
+        """S8.3, S8.4: propose the test seams, and act on the user's approval or feedback."""
+        draft = PrdDoc.model_validate(state["prd_draft"])
+        proposed = [Seam.model_validate(s) for s in state.get("seams") or []]
+        counters = dict(state["id_counters"])
+        answer = last_answer(list(state["messages"]))
+        feedback = None
+        if answer is not None and answer[0] == APPROVE_SEAMS and state["stage"] == "seam_gate":
+            if step_approved(answer[1]):
+                seams = approved_seams(answer[1].get("seams"), proposed, counters) or proposed
+                final = draft.model_copy(
+                    update={"testing_decisions": [seam_decision(s) for s in seams]}
+                )
+                version = PrdVersion(version="1.1", approved_at=utc_now(), doc=final)
+                changes = state.get("proposed_changes") or []
+                return {
+                    "seams": [s.model_dump(mode="json") for s in seams],
+                    "prd_draft": final.model_dump(mode="json"),
+                    "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
+                    "id_counters": counters,
+                    "stage": "change_review" if changes else "ticket_breakdown",
+                    "last_error": None,
+                    "messages": [
+                        AIMessage(
+                            "The seams are approved and PRD v1.1 is frozen. You can download it now."
+                        )
+                    ],
+                }
+            feedback = (
+                str(answer[1].get("feedback") or "").strip()
+                or "The user asked for different seams."
+            )
+        meter = Meter.for_node(state, "seam_proposer")
+        prompt = seam_messages(assets, draft, feedback, proposed)
+        try:
+            out, problems = await structured_with_retry(
+                meter, SeamsOut, prompt, lambda o: seam_problems(o.seams, draft), config
+            )
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}
+        if problems:
+            error = ModelCallFailed(
+                "invalid_output",
+                "The seam proposal broke its rules: " + "; ".join(problems),
+                retryable=True,
+            )
+            return {"last_error": error.info(), "tokens_used": meter.used}
+        seams = issue_seams(out.seams, counters)
+        text = f"I propose {len(seams)} test seam{'s' if len(seams) != 1 else ''}. Approve them, edit them, or tell me what to change."
+        message, call = gate_message(
+            APPROVE_SEAMS, {"seams": [s.model_dump(mode="json") for s in seams]}, text
+        )
+        await open_gate(config, message, call)
+        return {
+            "seams": [s.model_dump(mode="json") for s in seams],
+            "id_counters": counters,
+            "stage": "seam_gate",
+            "tokens_used": meter.used,
+            "last_error": None,
+            "messages": [message],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
@@ -591,13 +738,29 @@ def build_graph(
         builder.add_node(name, reviewer(lens), input_schema=ReviewChannel)
     builder.add_node("gap_merger", gap_merger, input_schema=ReviewChannel)
     builder.add_node("prd_drafter", prd_drafter)
+    builder.add_node("spec_synthesizer", spec_synthesizer)
+    builder.add_node("seam_proposer", seam_proposer)
     builder.add_conditional_edges(
-        START, route_start, ["interviewer", "critic", *REVIEWERS, "prd_drafter", END]
+        START,
+        route_start,
+        [
+            "interviewer",
+            "critic",
+            *REVIEWERS,
+            "prd_drafter",
+            "spec_synthesizer",
+            "seam_proposer",
+            END,
+        ],
     )
     builder.add_conditional_edges("critic", route_critic, [*REVIEWERS, END])
     builder.add_edge(REVIEWERS, "gap_merger")
     builder.add_conditional_edges("gap_merger", route_gap_merger, ["prd_drafter", END])
-    builder.add_edge("prd_drafter", END)
+    builder.add_conditional_edges("prd_drafter", route_prd_drafter, ["spec_synthesizer", END])
+    builder.add_conditional_edges(
+        "spec_synthesizer", route_spec_synthesizer, ["seam_proposer", END]
+    )
+    builder.add_edge("seam_proposer", END)
     builder.add_conditional_edges(
         "interviewer", route_interviewer, ["design_tools", "prd_drafter", END]
     )

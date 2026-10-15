@@ -19,6 +19,7 @@ import { Canvas } from "./canvas/Canvas";
 import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
+import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
 import { SignOffCard } from "./gates/SignOffCard";
 import { DownloadsMenu } from "./DownloadsMenu";
 import { PrdViewer } from "./PrdViewer";
@@ -101,6 +102,21 @@ function useGates() {
     render: ({ args, status, respond, result }) => (
       <SignOffCard
         args={args as Partial<{ prd: PrdDoc }>}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (answer) => void respond(answer) : undefined}
+        result={result}
+      />
+    ),
+  });
+  useHumanInTheLoop<{ seams: CardSeam[] }>({
+    name: "approve_seams",
+    description: "The app asks the user to approve or edit the proposed test seams. Never call this yourself.",
+    parameters: z.object({
+      seams: z.array(z.object({ id: z.string().optional(), name: z.string(), description: z.string(), covers: z.array(z.string()) })),
+    }),
+    render: ({ args, status, respond, result }) => (
+      <ApproveSeamsCard
+        args={args}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (answer) => void respond(answer) : undefined}
         result={result}

@@ -214,7 +214,8 @@ def test_prd_v1_0_docx_has_the_s10_4_sections_in_order() -> None:
     core = document.core_properties
     assert (core.author, core.created.isoformat(), core.modified.isoformat()) == (
         "Blueprint Studio",
-        "2026-10-14T12:30:00+00:00", "2026-10-14T12:30:00+00:00"
+        "2026-10-14T12:30:00+00:00",
+        "2026-10-14T12:30:00+00:00",
     )
     assert (
         render(signed_off_state(), "prd-v1.0.docx", "URL shortener") == data
@@ -231,7 +232,17 @@ def test_prd_docx_opens_in_libreoffice(tmp_path: Path) -> None:
 
 def libreoffice_pdf(source: Path, workdir: Path) -> bytes:
     profile = f"-env:UserInstallation=file://{workdir}/lo-profile"
-    command = ["soffice", profile, "--headless", "--norestore", "--convert-to", "pdf", "--outdir", str(workdir), str(source)]
+    command = [
+        "soffice",
+        profile,
+        "--headless",
+        "--norestore",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        str(workdir),
+        str(source),
+    ]
     result = subprocess.run(command, capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
     return source.with_suffix(".pdf").read_bytes()
