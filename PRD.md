@@ -1,7 +1,7 @@
 # PRD — Blueprint Studio
 
 > **Source:** Synthesized with the `to-spec` method (mattpocock-skills 1.2.3, MIT, © 2026 Matt Pocock) from the planning conversation and the grill session that followed it (decisions locked 2026-10-14). No interview beyond those.
-> **Status:** Approved scope. Ticket breakdown in `TICKETS.md`.
+> **Status:** Approved scope.
 > **ID scheme:** goals `G#`, features `F-#`, functional requirements `FR-#`, non-functional requirements `NFR-#`, user stories `US-#`, decisions `D#`, non-goals `NG#`, open questions `OQ-#`. IDs are stable; append, never renumber.
 
 ---

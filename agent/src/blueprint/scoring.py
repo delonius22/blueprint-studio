@@ -1,8 +1,8 @@
 """The Step 5 scorecard (SPECS S5.8, S2.8, PRD FR-9, G5).
 
 Every score is backed by verbatim quotes from the session. PRD OQ-6 asked which
-turns may be quoted; the user answered (QUESTIONS.md Q-10): the user's own
-messages only, so QUOTES_FROM is "user".
+turns may be quoted; the answer is the user's own messages only, so QUOTES_FROM
+is "user".
 """
 
 import re

@@ -1,8 +1,8 @@
 """Proposed changes to signed-off PRD content, and PRD v1.2 (SPECS S8.5, S2.13, PRD FR-19).
 
-How an approved change is applied is QUESTIONS.md Q-11, answered (a): every change is
-an exact edit of what the user saw, and a change these rules cannot apply is rejected
-at validation (S8.2), so an approved change is always applied exactly as approved.
+Every change is an exact edit of what the user saw, and a change these rules cannot
+apply is rejected at validation (S8.2), so an approved change is always applied exactly
+as approved.
 """
 
 from collections.abc import Sequence
