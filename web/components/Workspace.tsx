@@ -14,8 +14,9 @@ import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
-import { liveState } from "../lib/state";
+import { liveState, type SessionState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
+import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
 import { ScorecardPanel } from "./ScorecardPanel";
@@ -103,12 +104,29 @@ function useLastError(error: ErrorInfo | null) {
   return { visible, retry, dismiss: () => setDismissed(error), retrying };
 }
 
+// S11.3: canvas edits are written with agent.setState and saved (and validated, S2.15) by a
+// run that adds no message; the interviewer acknowledges them on its next turn (S5.9).
+function useCanvasEditing(state: SessionState): CanvasEditor {
+  const { copilotkit } = useCopilotKit();
+  const { agent } = useAgent({ agentId: AGENT_NAME });
+  return {
+    design: state.design,
+    counters: state.id_counters,
+    disabled: agent.isRunning || state.stage !== "interview",
+    save: (design, counters) => {
+      agent.setState({ ...(agent.state as Record<string, unknown>), design, id_counters: counters });
+      void copilotkit.runAgent({ agent });
+    },
+  };
+}
+
 function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
   useGates();
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
   const lastError = useLastError((state.last_error as ErrorInfo | null) ?? null);
+  const editor = useCanvasEditing(state);
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -132,7 +150,9 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
       <div className={styles.body}>
         <main className={styles.main}>
           {state.scorecard && <ScorecardPanel scorecard={state.scorecard} />}
-          <Canvas design={state.design} />
+          <CanvasEditContext.Provider value={editor}>
+            <Canvas design={state.design} />
+          </CanvasEditContext.Provider>
         </main>
         <aside className={styles.chat} aria-label="Interview chat">
           <CopilotChat agentId={AGENT_NAME} threadId={session.id} />

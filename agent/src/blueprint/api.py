@@ -24,6 +24,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from blueprint.edits import apply_browser_write
 from blueprint.gates import OPEN_GATE_EVENT
 from blueprint.state import SESSION_FIELDS, SessionState, new_session_state
 from blueprint.store import InvalidCursor, SessionRow, SessionStore
@@ -134,6 +135,10 @@ class SessionAgent(LangGraphAGUIAgent):
                 type=EventType.RUN_ERROR, message="unknown session", code="not_found"
             )
             return
+        # S2.15: the browser's state is checked against the checkpoint before the graph sees it.
+        checkpoint = await self.graph.aget_state({"configurable": {"thread_id": input.thread_id}})
+        state = apply_browser_write(dict(checkpoint.values or {}), dict(input.state or {}))
+        input = input.model_copy(update={"state": state})
         async for event in super().run(input):  # type: ignore[no-untyped-call]
             yield event
             if isinstance(event, CustomEvent) and event.name == OPEN_GATE_EVENT:

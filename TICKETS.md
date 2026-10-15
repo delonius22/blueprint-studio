@@ -179,12 +179,12 @@
 
 **Delivers stories:** US-13
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every canvas panel supports add, edit and delete through `agent.setState` (S11.3).
-- [ ] Writes are validated as S2.15 defines; an invalid write keeps the old state and sets `last_error`.
-- [ ] New items get IDs per S2.5; deleted IDs are never reused.
-- [ ] A graph-seam test shows the next interviewer call receives a note naming the edited IDs, and that `agent_design` tracks the interviewer's own writes (S5.9).
+- [x] Every canvas panel supports add, edit and delete through `agent.setState` (S11.3).
+- [x] Writes are validated as S2.15 defines; an invalid write keeps the old state and sets `last_error`.
+- [x] New items get IDs per S2.5; deleted IDs are never reused.
+- [x] A graph-seam test shows the next interviewer call receives a note naming the edited IDs, and that `agent_design` tracks the interviewer's own writes (S5.9).
 
 ---
 

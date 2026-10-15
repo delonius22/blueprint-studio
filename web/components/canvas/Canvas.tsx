@@ -1,6 +1,7 @@
 // The design canvas (SPECS S11.2, S11.3): one panel per Design list, updated live.
 import type { Design, Entity } from "../../lib/state";
 import styles from "./Canvas.module.css";
+import { CapStancePanel } from "./CapStancePanel";
 import { DiagramPanel } from "./DiagramPanel";
 import { Panel } from "./Panel";
 
@@ -27,10 +28,12 @@ export function Canvas({ design }: { design: Design }) {
         <div className={styles.grid}>
           <Panel
             title="Functional requirements"
+            list="functional_requirements"
             items={design.functional_requirements.map((r) => ({ id: r.id, content: r.statement }))}
           />
           <Panel
             title="Non-functional requirements"
+            list="non_functional_requirements"
             items={design.non_functional_requirements.map((n) => ({
               id: n.id,
               content: (
@@ -49,10 +52,12 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Out of scope"
+            list="out_of_scope"
             items={design.out_of_scope.map((o) => ({ id: o.id, content: o.text }))}
           />
           <Panel
             title="Capacity estimates"
+            list="capacity_estimates"
             items={design.capacity_estimates.map((e) => ({
               id: e.id,
               content: (
@@ -72,6 +77,7 @@ export function Canvas({ design }: { design: Design }) {
         <div className={styles.grid}>
           <Panel
             title="Entities"
+            list="entities"
             items={design.entities.map((e) => ({
               id: e.id,
               content: (
@@ -98,6 +104,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Relationships"
+            list="relationships"
             items={design.relationships.map((r) => ({
               id: r.id,
               content: (
@@ -110,6 +117,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="API endpoints"
+            list="endpoints"
             items={design.endpoints.map((e) => ({
               id: e.id,
               content: (
@@ -129,6 +137,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Storage choices"
+            list="storage_choices"
             items={design.storage_choices.map((c) => ({
               id: c.id,
               content: (
@@ -150,6 +159,7 @@ export function Canvas({ design }: { design: Design }) {
         <div className={styles.grid}>
           <Panel
             title="Components"
+            list="components"
             items={design.components.map((c) => ({
               id: c.id,
               content: (
@@ -162,6 +172,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Data flows"
+            list="flows"
             items={design.flows.map((f) => ({
               id: f.id,
               content: (
@@ -179,21 +190,10 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
-          <Panel
-            title="CAP stance"
-            items={
-              design.cap_stance
-                ? [
-                    {
-                      id: design.cap_stance.choice,
-                      content: design.cap_stance.rationale,
-                    },
-                  ]
-                : []
-            }
-          />
+          <CapStancePanel stance={design.cap_stance ?? null} />
           <Panel
             title="Cache policies"
+            list="cache_policies"
             items={design.cache_policies.map((c) => ({
               id: c.id,
               content: (
@@ -209,6 +209,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Failure modes"
+            list="failure_modes"
             items={design.failure_modes.map((f) => ({
               id: f.id,
               content: (
@@ -228,6 +229,7 @@ export function Canvas({ design }: { design: Design }) {
         <div className={styles.grid}>
           <Panel
             title="Single points of failure"
+            list="spofs"
             items={design.spofs.map((s) => ({
               id: s.id,
               content: (
@@ -242,6 +244,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <Panel
             title="Observability"
+            list="observability"
             items={design.observability.map((o) => ({
               id: o.id,
               content: (
@@ -259,6 +262,7 @@ export function Canvas({ design }: { design: Design }) {
         <div className={styles.grid}>
           <Panel
             title="Trade-offs"
+            list="tradeoffs"
             items={design.tradeoffs.map((t) => ({
               id: t.id,
               content: (
@@ -271,7 +275,8 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
-          <Panel title="Extensions" items={design.extensions.map((e) => ({ id: e.id, content: e.text }))} />
+          <Panel title="Extensions"
+            list="extensions" items={design.extensions.map((e) => ({ id: e.id, content: e.text }))} />
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ from blueprint.design import (
     tool_schemas,
 )
 from blueprint.domain import Critique, Design, Model, Scorecard
+from blueprint.edits import edit_note
 from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_approved
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
@@ -162,7 +163,8 @@ def build_graph(
     async def interviewer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         step = state["current_step"]
         design = Design.model_validate(state["design"])
-        system = interviewer_prompt(assets, state["stage"], step, design)
+        seen = Design.model_validate(state["agent_design"]) if state.get("agent_design") else None
+        system = interviewer_prompt(assets, state["stage"], step, design, edit_note(seen, design))
         tools = tool_schemas(bound_tool_names(step)) + frontend_actions(state)
         # Tool calls are not streamed to the browser: backend calls are internal, and a
         # confirm_step card may only open after design_tools has checked its blockers (S5.6).
@@ -180,7 +182,13 @@ def build_graph(
             )
         except ModelCallFailed as failure:
             return {"last_error": failure.info()}  # S13.2: nothing else changes
-        return {"messages": [reply], "tokens_used": meter.used, "last_error": None}
+        # S5.9: the interviewer has now seen this design, including the user's edits.
+        return {
+            "messages": [reply],
+            "tokens_used": meter.used,
+            "last_error": None,
+            "agent_design": design.model_dump(mode="json"),
+        }
 
     async def design_tools(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         last = _last(state)
