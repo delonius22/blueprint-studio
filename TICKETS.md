@@ -305,12 +305,12 @@
 
 **Delivers stories:** US-37, US-38, US-53
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `requirements.docx` renders as S10.5 defines from the current PRD.
-- [ ] `user-stories.docx` renders as S10.6 defines, with build waves computed from the blocking edges.
-- [ ] Both are `409` before `stage` is `complete` (S10.3).
-- [ ] Both open without repair prompts in Word 365, LibreOffice 24+ and Google Docs (NFR-11).
+- [x] `requirements.docx` renders as S10.5 defines from the current PRD.
+- [x] `user-stories.docx` renders as S10.6 defines, with build waves computed from the blocking edges.
+- [x] Both are `409` before `stage` is `complete` (S10.3).
+- [x] Both open without repair prompts in Word 365, LibreOffice 24+ and Google Docs (NFR-11).
 
 ---
 

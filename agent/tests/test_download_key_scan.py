@@ -8,7 +8,7 @@ import io
 import zipfile
 
 from conftest import INTERVIEW_KEY, REVIEW_KEY
-from test_prd import signed_off_state
+from fixtures import complete_state
 
 from blueprint.downloads import RENDERERS, render, unmet
 
@@ -21,7 +21,7 @@ def contents(data: bytes) -> list[bytes]:
 
 
 def test_no_download_contains_a_key() -> None:
-    state = signed_off_state()
+    state = complete_state()
     scanned = []
     for kind in RENDERERS:
         if unmet(state, kind) is not None:
@@ -29,4 +29,6 @@ def test_no_download_contains_a_key() -> None:
         for part in contents(render(state, kind, "URL shortener")):
             assert INTERVIEW_KEY.encode() not in part and REVIEW_KEY.encode() not in part, kind
         scanned.append(kind)
-    assert "prd-v1.0.docx" in scanned
+    assert {"prd-v1.0.docx", "prd-v1.1.docx", "requirements.docx", "user-stories.docx"} <= set(
+        scanned
+    )
