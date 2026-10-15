@@ -29,6 +29,40 @@ The app uses two model roles, each configured by a base URL, an API key and a mo
 
 All model calls go through one factory, `agent/src/blueprint/models.py`. API keys stay in the agent container and never reach the web container.
 
+## Run without Docker
+
+You need these on the machine:
+- [uv](https://docs.astral.sh/uv/), which downloads Python 3.14 itself if it's missing.
+- Node.js 24.
+- A Postgres database. Either install Postgres locally and create an empty database (`createuser -P blueprint` then `createdb -O blueprint blueprint`), or use a hosted Postgres such as Neon or Supabase.
+
+The agent creates its tables on first start.
+
+In `.env`, point two settings at your machine instead of the Docker service names:
+
+```sh
+DATABASE_URL=postgresql://blueprint:<password>@localhost:5432/blueprint
+AGENT_URL=http://localhost:8000
+```
+
+Then start the agent and the web app in two terminals:
+
+```sh
+# Terminal 1: the agent, on port 8000
+cd agent
+uv run --env-file ../.env python -m blueprint    # installs Python 3.14 and dependencies on first run
+
+# Terminal 2: the web app, on port 3000
+cd web
+npm ci
+npm run build
+AGENT_URL=http://localhost:8000 npm start
+```
+
+- **Windows (PowerShell):** set the variable first with `$env:AGENT_URL="http://localhost:8000"`, then run `npm start`.
+- **Startup warning:** `next start` warns that it "does not work with output: standalone". That warning is harmless here: the app runs normally.
+- **Port in use:** to use a port other than 3000, run `npm start -- -p <port>`.
+
 ## Layout
 
 | Path | What it is |
