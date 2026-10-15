@@ -4,7 +4,7 @@ Nodes do the work; routing functions are pure functions of state (S5.1).
 """
 
 import json
-from typing import Any
+from typing import Annotated, Any
 
 from copilotkit.langgraph import copilotkit_customize_config
 from langchain_core.callbacks.manager import adispatch_custom_event
@@ -29,10 +29,35 @@ from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_app
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
+from blueprint.review import (
+    LENSES,
+    Findings,
+    GapFinding,
+    MergedGaps,
+    cited,
+    findings_payload,
+    gap_register,
+    merger_messages,
+    review_summary,
+    reviewer_messages,
+)
 from blueprint.scoring import ScorecardError, make_scorecard
 from blueprint.state import DesignState
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]
+
+REVIEWERS = [f"review_{lens}" for lens in LENSES]
+
+
+def _merge_lenses(left: dict[str, Any] | None, right: dict[str, Any] | None) -> dict[str, Any]:
+    return {**(left or {}), **(right or {})}
+
+
+class ReviewChannel(DesignState):
+    """Graph-internal channel for the parallel reviewers (S6.1): findings, tokens or an error
+    per lens, gathered by the gap_merger. It is not part of the session state (S2.2)."""
+
+    review: Annotated[dict[str, Any], _merge_lenses]
 
 
 def frontend_actions(state: DesignState) -> list[dict[str, Any]]:
@@ -63,7 +88,7 @@ def _gate_calls(message: AIMessage) -> list[dict[str, Any]]:
 # --- routing (pure) --------------------------------------------------------------------------
 
 
-def route_start(state: DesignState) -> str:
+def route_start(state: DesignState) -> str | list[str]:
     """Route a new run by what the user just sent (S5.1).
 
     A chat message goes to the interviewer; an approved ``confirm_step`` goes to the
@@ -72,6 +97,8 @@ def route_start(state: DesignState) -> str:
     """
     if state.get("last_error"):
         return END
+    if state.get("stage") == "design_review":
+        return REVIEWERS  # the review runs (or re-runs after a failure)
     messages = list(state.get("messages") or [])
     answer = last_answer(messages)
     if answer is not None:
@@ -82,6 +109,13 @@ def route_start(state: DesignState) -> str:
     if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
+
+
+def route_critic(state: DesignState) -> str | list[str]:
+    """After Step 5 the design review starts: three reviewers in parallel (S6.1)."""
+    if state.get("last_error") or state.get("stage") != "design_review":
+        return END
+    return REVIEWERS
 
 
 def route_interviewer(state: DesignState) -> str:
@@ -276,12 +310,85 @@ def build_graph(
             messages.append(AIMessage(format_scorecard(scorecard)))
         return update | {"messages": messages}
 
+    def reviewer(lens: Any) -> Any:
+        async def review(state: ReviewChannel, config: RunnableConfig) -> dict[str, Any]:
+            meter = Meter.for_node(state, f"review_{lens}")
+            spent = meter.used.get("review", 0)
+            design = Design.model_validate(state["design"])
+            try:
+                result = await calls.structured(
+                    meter, "review", Findings, reviewer_messages(assets, lens, design), config
+                )
+                entry: dict[str, Any] = {"findings": findings_payload(result.findings, lens)}
+            except ModelCallFailed as failure:
+                entry = {"error": failure.info()}
+            except InvalidStructuredOutput as invalid:
+                entry = {
+                    "error": ModelCallFailed("invalid_output", str(invalid), retryable=True).info()
+                }
+            entry["tokens"] = meter.used.get("review", 0) - spent
+            return {"review": {lens: entry}}
+
+        return review
+
+    async def gap_merger(state: ReviewChannel, config: RunnableConfig) -> dict[str, Any]:
+        """S6.4: merge the three lists on the review model, then hold the result to the rules."""
+        review = state.get("review") or {}
+        meter = Meter.for_node(state, "gap_merger")
+        meter.used["review"] = meter.used.get("review", 0) + sum(
+            int((review.get(lens) or {}).get("tokens", 0)) for lens in LENSES
+        )
+        errors = [review[lens]["error"] for lens in LENSES if (review.get(lens) or {}).get("error")]
+        missing = [lens for lens in LENSES if lens not in review]
+        if errors or missing:
+            error = (
+                errors[0]
+                if errors
+                else ModelCallFailed(
+                    "review_incomplete",
+                    "The design review did not finish; retry it.",
+                    retryable=True,
+                ).info()
+            )
+            return {"last_error": error, "tokens_used": meter.used}
+        design = Design.model_validate(state["design"])
+        findings = [
+            GapFinding.model_validate(f) for lens in LENSES for f in review[lens]["findings"]
+        ]
+        inputs = cited(findings, design)
+        counters = dict(state["id_counters"])
+        gaps = []
+        if inputs:
+            try:
+                merged = await calls.structured(
+                    meter, "review", MergedGaps, merger_messages(assets, design, inputs), config
+                )
+            except ModelCallFailed as failure:
+                return {"last_error": failure.info(), "tokens_used": meter.used}
+            except InvalidStructuredOutput as invalid:
+                error = ModelCallFailed("invalid_output", str(invalid), retryable=True)
+                return {"last_error": error.info(), "tokens_used": meter.used}
+            gaps = gap_register(merged.gaps, inputs, design, counters)
+        return {
+            "gaps": [gap.model_dump(mode="json") for gap in gaps],
+            "id_counters": counters,
+            "stage": "gap_resolution" if gaps else "prd_draft",
+            "tokens_used": meter.used,
+            "last_error": None,
+            "messages": [AIMessage(review_summary(gaps))],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
     builder.add_node("critic", critic)
-    builder.add_conditional_edges(START, route_start, ["interviewer", "critic", END])
-    builder.add_edge("critic", END)
+    for lens, name in zip(LENSES, REVIEWERS, strict=True):
+        builder.add_node(name, reviewer(lens), input_schema=ReviewChannel)
+    builder.add_node("gap_merger", gap_merger, input_schema=ReviewChannel)
+    builder.add_conditional_edges(START, route_start, ["interviewer", "critic", *REVIEWERS, END])
+    builder.add_conditional_edges("critic", route_critic, [*REVIEWERS, END])
+    builder.add_edge(REVIEWERS, "gap_merger")
+    builder.add_edge("gap_merger", END)
     builder.add_conditional_edges("interviewer", route_interviewer, ["design_tools", END])
     builder.add_conditional_edges("design_tools", route_design_tools, ["interviewer", END])
     return builder.compile(checkpointer=checkpointer)

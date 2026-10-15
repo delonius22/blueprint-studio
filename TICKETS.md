@@ -196,15 +196,15 @@
 
 **Delivers stories:** US-18, US-19, US-20, US-23
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The `Gap` type exists as S2.9 defines.
-- [ ] The three reviewer nodes run in parallel on the review-role model with the inputs of S6.1, the checklists of S6.2 and the rules and severity definitions of S6.3.
-- [ ] The `gap_merger` drops findings that cite no existing item, combines duplicates keeping the higher severity, and issues `GAP` IDs (S6.4).
-- [ ] A graph-seam test with a scripted review model shows a finding that proposes a new component produces no design item and no requirement (S6.3, G3).
-- [ ] Zero gaps sends the session to `prd_draft`; otherwise to `gap_resolution` (S6.4).
-- [ ] Tokens are counted under the `review` role (S13.3).
-- [ ] The gap register panel and the same-model warning render as S11.2 and S6.6 define.
+- [x] The `Gap` type exists as S2.9 defines.
+- [x] The three reviewer nodes run in parallel on the review-role model with the inputs of S6.1, the checklists of S6.2 and the rules and severity definitions of S6.3.
+- [x] The `gap_merger` drops findings that cite no existing item, combines duplicates keeping the higher severity, and issues `GAP` IDs (S6.4).
+- [x] A graph-seam test with a scripted review model shows a finding that proposes a new component produces no design item and no requirement (S6.3, G3).
+- [x] Zero gaps sends the session to `prd_draft`; otherwise to `gap_resolution` (S6.4).
+- [x] Tokens are counted under the `review` role (S13.3).
+- [x] The gap register panel and the same-model warning render as S11.2 and S6.6 define.
 
 ---
 

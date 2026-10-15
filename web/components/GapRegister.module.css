@@ -1,0 +1,56 @@
+.register {
+  padding: 1rem 1.25rem;
+}
+
+.register h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.register table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.register th,
+.register td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.high,
+.medium,
+.low {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0 0.35rem;
+}
+
+.high {
+  color: var(--danger);
+}
+
+.medium,
+.low {
+  color: var(--fg);
+}

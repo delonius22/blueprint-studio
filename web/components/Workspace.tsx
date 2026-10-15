@@ -19,7 +19,9 @@ import { Canvas } from "./canvas/Canvas";
 import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
+import { GapRegister } from "./GapRegister";
 import { ScorecardPanel } from "./ScorecardPanel";
+import { ReviewModelWarning } from "./ReviewModelWarning";
 import { StageTracker } from "./StageTracker";
 import { TokenMeter } from "./TokenMeter";
 import styles from "./Workspace.module.css";
@@ -139,6 +141,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
         />
         <TokenMeter used={state.tokens_used} budget={state.token_budget} />
       </header>
+      <ReviewModelWarning distinct={state.review_model_distinct} />
       {lastError.visible && (
         <ErrorAlert
           error={lastError.visible}
@@ -150,9 +153,13 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
       <div className={styles.body}>
         <main className={styles.main}>
           {state.scorecard && <ScorecardPanel scorecard={state.scorecard} />}
-          <CanvasEditContext.Provider value={editor}>
-            <Canvas design={state.design} />
-          </CanvasEditContext.Provider>
+          {state.stage === "interview" ? (
+            <CanvasEditContext.Provider value={editor}>
+              <Canvas design={state.design} />
+            </CanvasEditContext.Provider>
+          ) : (
+            <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
+          )}
         </main>
         <aside className={styles.chat} aria-label="Interview chat">
           <CopilotChat agentId={AGENT_NAME} threadId={session.id} />

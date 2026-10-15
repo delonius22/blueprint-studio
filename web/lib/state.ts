@@ -17,6 +17,21 @@ export type Flow = Schemas["Flow"];
 export type CachePolicy = Schemas["CachePolicy"];
 export type FailureMode = Schemas["FailureMode"];
 export type Scorecard = Schemas["Scorecard"];
+export type Gap = Schemas["Gap"];
+
+/** "EP-1: POST /urls" for any design item ID, or the bare ID if it is unknown. */
+export function itemLabel(design: Design, id: string): string {
+  for (const list of Object.values(design)) {
+    if (!Array.isArray(list)) continue;
+    const item = (list as Record<string, unknown>[]).find((i) => i.id === id);
+    if (!item) continue;
+    const name =
+      item.name ?? item.statement ?? item.text ?? item.scenario ?? item.decision ?? item.data ??
+      (item.method ? `${item.method} ${item.path}` : undefined) ?? item.quantity ?? item.risk;
+    return name ? `${id}: ${String(name)}` : id;
+  }
+  return id;
+}
 
 export const EMPTY_DESIGN: Design = {
   functional_requirements: [],

@@ -181,3 +181,41 @@ class FakeTimeout(Exception):
 
 
 FakeTimeout.__name__ = "APITimeoutError"
+
+
+class RoutedChatModel(ScriptedChatModel):
+    """Answers structured calls with ``route(messages, schema)``: for calls made in parallel,
+    where the order of a script would be arbitrary."""
+
+    route: Any = None
+
+    @classmethod
+    def answering(
+        cls, route: Any, name: str = "routed", usage: tuple[int, int] | None = None
+    ) -> RoutedChatModel:
+        model = cls(name=name, usage=usage)
+        model.route = route
+        return model
+
+    def _next(self) -> ScriptEntry:  # pragma: no cover - structured calls use route()
+        raise AssertionError(f"{self.name}: unexpected chat call")
+
+    def with_structured_output(  # type: ignore[override]
+        self,
+        schema: type[BaseModel],
+        *,
+        method: str = "json_schema",
+        include_raw: bool = False,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, Any]:
+        def answer(value: LanguageModelInput, config: RunnableConfig | None = None) -> Any:
+            messages = value if isinstance(value, list) else []
+            self._calls.append(Call(messages=messages, tools=[], structured_method=method))
+            entry = self.route(messages, schema)
+            if isinstance(entry, Exception):
+                raise entry
+            raw = self._with_usage(AIMessage(content=json.dumps(entry)))
+            parsed = schema.model_validate(entry)
+            return {"raw": raw, "parsed": parsed, "parsing_error": None} if include_raw else parsed
+
+        return RunnableLambda(answer)
