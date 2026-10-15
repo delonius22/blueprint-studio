@@ -71,4 +71,3 @@ The end-to-end test is in `web/e2e/smoke.spec.ts`:
 | `MODEL-CONNECTION.md` | How the app connects to models; overrides SPECS §1 where they differ |
 | `TICKETS.md` | The 20 tickets the app was built from, with acceptance criteria |
 | `QUESTIONS.md` | Conflicts and questions raised during the build, and how each was settled |
-| `docs/` | The PRD, requirements and user stories as Word documents, plus an example `context.md` Jira hand-off |

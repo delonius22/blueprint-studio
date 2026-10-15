@@ -11,7 +11,7 @@ from blueprint.state import SessionState
 ATTRIBUTION = "*Ticket and spec method: to-tickets / to-spec, mattpocock-skills 1.2.3 (MIT, © 2026 Matt Pocock).*"
 
 
-# The user fills these in; the trailing space matches the worked example (docs/context.md).
+# The user fills these in; the trailing space matches the worked example (agent/tests/expected/example-context.md).
 BLANK = " "
 
 

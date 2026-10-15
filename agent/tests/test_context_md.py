@@ -12,7 +12,7 @@ from blueprint.domain import Gap
 from blueprint.downloads import render
 
 EXPECTED = REPO_ROOT / "agent" / "tests" / "expected" / "context.md"
-EXAMPLE = REPO_ROOT / "docs" / "context.md"
+EXAMPLE = REPO_ROOT / "agent" / "tests" / "expected" / "example-context.md"
 
 
 def rendered(**extra: Any) -> str:
@@ -24,7 +24,7 @@ def test_context_md_matches_the_checked_in_expected_file_byte_for_byte() -> None
 
 
 def test_the_fixed_parts_match_the_worked_example() -> None:
-    """Sections 1-4, the report and the attribution are the template of docs/context.md."""
+    """Sections 1-4, the report and the attribution are the template of the worked example."""
     example = EXAMPLE.read_text().replace("Blueprint Studio", "URL shortener")
     ours = rendered()
 
