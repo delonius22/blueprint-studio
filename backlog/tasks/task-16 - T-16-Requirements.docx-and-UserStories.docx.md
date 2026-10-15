@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-14 22:19'
-updated_date: '2026-10-15 01:58'
+updated_date: '2026-10-15 01:59'
 labels: []
 dependencies:
   - TASK-15
@@ -37,6 +37,8 @@ Mirrors T-16 in TICKETS.md, which is authoritative.
 <!-- SECTION:NOTES:BEGIN -->
 blueprint.exports.delivery_docx: render_requirements (FR table ID/Feature/Requirement/Covering stories, NFR table ID/Category/Requirement/Covering stories, appendix of open gaps and accepted risks) and render_user_stories (stories under feature headings with sentence, requirement IDs, delivering tickets and acceptance criteria; every ticket in ID order with what to build, blocking edges, delivered stories and a ☐ checklist; build-waves table wave/tickets/blocked by computed from the edges), both from the current PRD and stamped with tickets_approved_at. Registered in downloads; 409 before complete via the S10.3 rule. tests/fixtures.complete_state is the shared completed-session fixture; the key scan now covers PRD v1.0, v1.1, Requirements and UserStories.
 Validation: agent pytest 174 passed (incl. LibreOffice opening both documents, REST 409/200 with S10.2 file names, determinism).
+
+Correction: the full agent suite was 172 passed at commit time.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

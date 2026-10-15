@@ -7,6 +7,7 @@ no model call (S10.1). Availability is decided here, never in the browser.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from blueprint.exports.context_md import render_context
 from blueprint.exports.delivery_docx import render_requirements, render_user_stories
 from blueprint.exports.prd_docx import render_prd
 from blueprint.state import SessionState
@@ -41,6 +42,7 @@ RENDERERS: dict[str, Renderer] = {
     "prd-v1.2.docx": lambda state, name: render_prd(state, name, "1.2"),
     "requirements.docx": render_requirements,
     "user-stories.docx": render_user_stories,
+    "context.md": render_context,
 }
 
 

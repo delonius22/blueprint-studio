@@ -29,6 +29,11 @@ def test_no_download_contains_a_key() -> None:
         for part in contents(render(state, kind, "URL shortener")):
             assert INTERVIEW_KEY.encode() not in part and REVIEW_KEY.encode() not in part, kind
         scanned.append(kind)
-    assert {"prd-v1.0.docx", "prd-v1.1.docx", "requirements.docx", "user-stories.docx"} <= set(
-        scanned
-    )
+    expected = {
+        "prd-v1.0.docx",
+        "prd-v1.1.docx",
+        "requirements.docx",
+        "user-stories.docx",
+        "context.md",
+    }
+    assert expected <= set(scanned)
