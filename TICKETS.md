@@ -287,13 +287,13 @@
 
 **Delivers stories:** US-32, US-33, US-34, US-35
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The `ticket_planner` prompt is built as S9.1 defines, using `app-assets/to-tickets.md` verbatim; a graph-seam test shows the planner's input contains no gap text.
-- [ ] `Ticket` exists as S2.14 defines; validation and its one retry behave as S9.2 defines.
-- [ ] The `dag_validator` rejects unknown blockers, duplicates and cycles, naming the cycle, and renumbers valid tickets topologically (S9.3).
-- [ ] `review_tickets` approve and revise behave as S9.4 defines; approval sets `tickets_approved_at` and `stage` `complete`.
-- [ ] The ticket view shows the breakdown with blocking edges (S11.2).
+- [x] The `ticket_planner` prompt is built as S9.1 defines, using `app-assets/to-tickets.md` verbatim; a graph-seam test shows the planner's input contains no gap text.
+- [x] `Ticket` exists as S2.14 defines; validation and its one retry behave as S9.2 defines.
+- [x] The `dag_validator` rejects unknown blockers, duplicates and cycles, naming the cycle, and renumbers valid tickets topologically (S9.3).
+- [x] `review_tickets` approve and revise behave as S9.4 defines; approval sets `tickets_approved_at` and `stage` `complete`.
+- [x] The ticket view shows the breakdown with blocking edges (S11.2).
 
 ---
 

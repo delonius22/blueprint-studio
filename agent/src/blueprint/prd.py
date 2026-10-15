@@ -171,3 +171,8 @@ def signoff_summary(doc: PrdDoc) -> str:
         f"non-functional requirements, {len(doc.open_gaps)} open gaps and accepted risks. "
         "Review it in the PRD viewer, then sign it off or tell me what to change."
     )
+
+
+def current_prd(versions: Sequence[dict[str, object]]) -> PrdDoc | None:
+    """S8.6: the current PRD is the newest version; every later stage and download reads it."""
+    return PrdDoc.model_validate(versions[-1]["doc"]) if versions else None

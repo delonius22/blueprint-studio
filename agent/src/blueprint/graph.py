@@ -24,7 +24,17 @@ from blueprint.design import (
     step_blockers,
     tool_schemas,
 )
-from blueprint.domain import Critique, Design, Gap, Model, PrdDoc, PrdVersion, Scorecard, Seam
+from blueprint.domain import (
+    Critique,
+    Design,
+    Gap,
+    Model,
+    PrdDoc,
+    PrdVersion,
+    Scorecard,
+    Seam,
+    Ticket,
+)
 from blueprint.edits import edit_note
 from blueprint.gates import (
     APPROVE_SEAMS,
@@ -32,17 +42,26 @@ from blueprint.gates import (
     DECIDE_GAPS,
     GATES,
     OPEN_GATE_EVENT,
+    REVIEW_TICKETS,
     SIGN_OFF_PRD,
     close_unanswered,
     gap_decisions,
     gate_message,
     last_answer,
     latest_answer_to,
+    pending_gate,
     step_approved,
 )
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
-from blueprint.prd import PrdDraftOut, build_prd, draft_problems, drafter_messages, signoff_summary
+from blueprint.prd import (
+    PrdDraftOut,
+    build_prd,
+    current_prd,
+    draft_problems,
+    drafter_messages,
+    signoff_summary,
+)
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
 from blueprint.review import (
     LENSES,
@@ -70,6 +89,15 @@ from blueprint.spec import (
     synthesizer_messages,
 )
 from blueprint.state import DesignState
+from blueprint.tickets import (
+    DagError,
+    TicketDraft,
+    TicketsOut,
+    planner_messages,
+    ticket_problems,
+    tickets_summary,
+    validate_dag,
+)
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]
 
@@ -78,6 +106,16 @@ REVIEWERS = [f"review_{lens}" for lens in LENSES]
 
 def _merge_lenses(left: dict[str, Any] | None, right: dict[str, Any] | None) -> dict[str, Any]:
     return {**(left or {}), **(right or {})}
+
+
+class PlanningChannel(DesignState):
+    """Graph-internal channel from the ticket planner to the DAG validator (S9.3): the draft
+    tickets, the last DAG error and how many attempts were made. Not session state."""
+
+    planning: dict[str, Any]
+
+
+DAG_ATTEMPTS = 3
 
 
 class ReviewChannel(DesignState):
@@ -168,14 +206,20 @@ def route_start(state: DesignState) -> str | list[str]:
             return "prd_drafter"  # S7.3, S7.4
         if name == APPROVE_SEAMS:
             return "seam_proposer"  # S8.3, S8.4
+        if name == REVIEW_TICKETS:
+            return "completer" if content.get("decision") == "approve" else "ticket_planner"  # S9.4
         return "interviewer"
     stage = state.get("stage")
     if stage == "prd_draft":
         return "prd_drafter"
     if stage == "spec_synthesis":
         return "spec_synthesizer"
+    if pending_gate(messages):
+        return END  # a card is waiting: a run that adds nothing never opens it again
     if stage == "seam_gate" and not state.get("seams"):
-        return "seam_proposer"  # a card already waiting is never proposed twice
+        return "seam_proposer"
+    if stage == "ticket_breakdown":
+        return "ticket_planner"
     if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
@@ -205,6 +249,25 @@ def route_prd_drafter(state: DesignState) -> str:
     """Sign-off starts the to-spec synthesis (S7.4, S8.1)."""
     if not state.get("last_error") and state.get("stage") == "spec_synthesis":
         return "spec_synthesizer"
+    return END
+
+
+def route_seam_proposer(state: DesignState) -> str:
+    """Approved seams with no proposed changes go straight to the tickets (S8.4)."""
+    if not state.get("last_error") and state.get("stage") == "ticket_breakdown":
+        return "ticket_planner"
+    return END
+
+
+def route_ticket_planner(state: DesignState) -> str:
+    return END if state.get("last_error") else "dag_validator"
+
+
+def route_dag_validator(state: PlanningChannel) -> str:
+    """S9.3: invalid edges go back to the planner with the error (a bounded number of times)."""
+    planning = state.get("planning") or {}
+    if not state.get("last_error") and planning.get("error"):
+        return "ticket_planner"
     return END
 
 
@@ -730,6 +793,94 @@ def build_graph(
             "messages": [message],
         }
 
+    async def ticket_planner(state: PlanningChannel, config: RunnableConfig) -> dict[str, Any]:
+        """S9.1, S9.2, S9.4: break the current PRD into tickets with to-tickets."""
+        prd = current_prd(state["prd_versions"])
+        assert prd is not None
+        planning = dict(state.get("planning") or {})
+        answer = last_answer(list(state["messages"]))
+        instructions = None
+        if answer is not None and answer[0] == REVIEW_TICKETS:
+            instructions = (
+                str(answer[1].get("instructions") or "").strip() or "Revise the breakdown."
+            )
+            planning = {}
+        attempts = int(planning.get("attempts", 0)) + 1
+        if attempts > DAG_ATTEMPTS:
+            error = ModelCallFailed(
+                "invalid_output",
+                f"The ticket breakdown kept invalid blocking edges: {planning.get('error')}",
+                retryable=True,
+            )
+            return {"last_error": error.info(), "planning": {}}
+        current = [Ticket.model_validate(t) for t in state.get("tickets") or []]
+        previous = [TicketDraft.model_validate(t) for t in planning.get("drafts") or []]
+        prompt = planner_messages(
+            assets, prd, current, instructions, planning.get("error"), previous
+        )
+        meter = Meter.for_node(state, "ticket_planner")
+        try:
+            out, problems = await structured_with_retry(
+                meter, TicketsOut, prompt, lambda o: ticket_problems(o.tickets, prd), config
+            )
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}
+        if problems:
+            error = ModelCallFailed(
+                "invalid_output",
+                "The ticket breakdown broke its rules: " + "; ".join(problems),
+                retryable=True,
+            )
+            return {"last_error": error.info(), "tokens_used": meter.used, "planning": {}}
+        return {
+            "planning": {
+                "drafts": [t.model_dump() for t in out.tickets],
+                "error": None,
+                "attempts": attempts,
+            },
+            "stage": "ticket_breakdown",
+            "tokens_used": meter.used,
+            "last_error": None,
+        }
+
+    async def dag_validator(state: PlanningChannel, config: RunnableConfig) -> dict[str, Any]:
+        """S9.3: check the blocking edges, renumber in build order, and ask for review."""
+        planning = dict(state.get("planning") or {})
+        drafts = [TicketDraft.model_validate(t) for t in planning.get("drafts") or []]
+        try:
+            tickets = validate_dag(drafts)
+        except DagError as invalid:
+            return {"planning": planning | {"error": str(invalid)}}
+        message, call = gate_message(
+            REVIEW_TICKETS,
+            {"tickets": [t.model_dump(mode="json") for t in tickets]},
+            tickets_summary(tickets),
+        )
+        await open_gate(config, message, call)
+        return {
+            "tickets": [t.model_dump(mode="json") for t in tickets],
+            "id_counters": dict(state["id_counters"]) | {"T": len(tickets)},
+            "stage": "ticket_gate",
+            "planning": {},
+            "messages": [message],
+        }
+
+    async def completer(state: DesignState) -> dict[str, Any]:
+        """S9.4: approval completes the session; one message lists the downloads."""
+        versions = ", ".join(f"PRD v{v['version']}.docx" for v in state["prd_versions"])
+        return {
+            "tickets_approved_at": utc_now(),
+            "stage": "complete",
+            "last_error": None,
+            "messages": [
+                AIMessage(
+                    "The ticket breakdown is approved and the session is complete. Your downloads are "
+                    f"ready: {versions}, Requirements.docx, UserStories.docx and context.md (the Jira "
+                    "hand-off), or all of them as one zip from the completion view."
+                )
+            ],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
@@ -740,6 +891,9 @@ def build_graph(
     builder.add_node("prd_drafter", prd_drafter)
     builder.add_node("spec_synthesizer", spec_synthesizer)
     builder.add_node("seam_proposer", seam_proposer)
+    builder.add_node("ticket_planner", ticket_planner, input_schema=PlanningChannel)
+    builder.add_node("dag_validator", dag_validator, input_schema=PlanningChannel)
+    builder.add_node("completer", completer)
     builder.add_conditional_edges(
         START,
         route_start,
@@ -750,6 +904,8 @@ def build_graph(
             "prd_drafter",
             "spec_synthesizer",
             "seam_proposer",
+            "ticket_planner",
+            "completer",
             END,
         ],
     )
@@ -760,7 +916,10 @@ def build_graph(
     builder.add_conditional_edges(
         "spec_synthesizer", route_spec_synthesizer, ["seam_proposer", END]
     )
-    builder.add_edge("seam_proposer", END)
+    builder.add_conditional_edges("seam_proposer", route_seam_proposer, ["ticket_planner", END])
+    builder.add_conditional_edges("ticket_planner", route_ticket_planner, ["dag_validator", END])
+    builder.add_conditional_edges("dag_validator", route_dag_validator, ["ticket_planner", END])
+    builder.add_edge("completer", END)
     builder.add_conditional_edges(
         "interviewer", route_interviewer, ["design_tools", "prd_drafter", END]
     )

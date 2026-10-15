@@ -14,12 +14,14 @@ import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
-import { liveState, type PrdDoc, type SessionState } from "../lib/state";
+import { liveState, type PrdDoc, type SessionState, type Ticket } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
+import { ReviewTicketsCard } from "./gates/ReviewTicketsCard";
+import { TicketView } from "./TicketView";
 import { SignOffCard } from "./gates/SignOffCard";
 import { DownloadsMenu } from "./DownloadsMenu";
 import { PrdViewer } from "./PrdViewer";
@@ -117,6 +119,19 @@ function useGates() {
     render: ({ args, status, respond, result }) => (
       <ApproveSeamsCard
         args={args}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (answer) => void respond(answer) : undefined}
+        result={result}
+      />
+    ),
+  });
+  useHumanInTheLoop<{ tickets: Ticket[] }>({
+    name: "review_tickets",
+    description: "The app asks the user to approve or revise the ticket breakdown. Never call this yourself.",
+    parameters: z.object({ tickets: z.array(z.any()) }),
+    render: ({ args, status, respond, result }) => (
+      <ReviewTicketsCard
+        args={args as Partial<{ tickets: Ticket[] }>}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (answer) => void respond(answer) : undefined}
         result={result}
@@ -225,6 +240,8 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             </CanvasEditContext.Provider>
           ) : state.stage === "design_review" || state.stage === "gap_resolution" ? (
             <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
+          ) : ["ticket_breakdown", "ticket_gate", "complete"].includes(state.stage) ? (
+            <TicketView tickets={state.tickets} stage={state.stage} />
           ) : (
             <PrdViewer draft={state.prd_draft ?? null} versions={state.prd_versions} stage={state.stage} />
           )}

@@ -20,6 +20,22 @@ export type Scorecard = Schemas["Scorecard"];
 export type Gap = Schemas["Gap"];
 export type PrdDoc = Schemas["PrdDoc"];
 export type PrdVersion = Schemas["PrdVersion"];
+export type Ticket = Schemas["Ticket"];
+
+/** Build waves: wave n holds the tickets whose blockers are all in earlier waves. */
+export function buildWaves(tickets: Ticket[]): Ticket[][] {
+  const waves: Ticket[][] = [];
+  const placed = new Set<string>();
+  let remaining = [...tickets];
+  while (remaining.length) {
+    const wave = remaining.filter((t) => (t.blocked_by ?? []).every((b) => placed.has(b)));
+    if (wave.length === 0) break; // an invalid graph never reaches the browser (S9.3)
+    waves.push(wave);
+    for (const t of wave) placed.add(t.id);
+    remaining = remaining.filter((t) => !placed.has(t.id));
+  }
+  return waves;
+}
 
 /** "EP-1: POST /urls" for any design item ID, or the bare ID if it is unknown. */
 export function itemLabel(design: Design, id: string): string {

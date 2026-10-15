@@ -17,6 +17,7 @@ CONFIRM_STEP = "confirm_step"
 DECIDE_GAPS = "decide_gaps"
 SIGN_OFF_PRD = "sign_off_prd"
 APPROVE_SEAMS = "approve_seams"
+REVIEW_TICKETS = "review_tickets"
 # Every approval gate (S11.4); the graph never executes these, the user answers them.
 GATES = frozenset(
     {CONFIRM_STEP, DECIDE_GAPS, "sign_off_prd", "approve_seams", "review_changes", "review_tickets"}
@@ -122,4 +123,14 @@ def latest_answer_to(messages: Sequence[BaseMessage], name: str) -> Any:
                 return json.loads(message.text)
             except json.JSONDecodeError:
                 return None
+    return None
+
+
+def pending_gate(messages: Sequence[BaseMessage]) -> str | None:
+    """The gate the newest message is still waiting on, if any."""
+    if not messages or not isinstance(messages[-1], AIMessage):
+        return None
+    for call in messages[-1].tool_calls:
+        if call["name"] in GATES:
+            return str(call["name"])
     return None
