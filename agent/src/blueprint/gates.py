@@ -6,12 +6,19 @@ next run brings. These helpers are pure functions of the message list.
 """
 
 import json
+import uuid
 from collections.abc import Sequence
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from pydantic import BaseModel, ValidationError
 
 CONFIRM_STEP = "confirm_step"
+DECIDE_GAPS = "decide_gaps"
+# Every approval gate (S11.4); the graph never executes these, the user answers them.
+GATES = frozenset(
+    {CONFIRM_STEP, DECIDE_GAPS, "sign_off_prd", "approve_seams", "review_changes", "review_tickets"}
+)
 
 # Custom graph event asking the agent endpoint to stream a gate tool call to the browser,
 # under the tool call's own ID, once the graph has decided the card may open.
@@ -38,9 +45,79 @@ def last_answer(messages: Sequence[BaseMessage]) -> tuple[str, dict[str, Any]] |
         parsed = json.loads(result.text)
     except json.JSONDecodeError:
         parsed = None
+    if isinstance(parsed, list):
+        parsed = {"decisions": parsed}
     return name, parsed if isinstance(parsed, dict) else {}
 
 
 def step_approved(answer: dict[str, Any]) -> bool:
     """S5.7: ``{"approved": true}``; anything else keeps the session on the step."""
     return answer.get("approved") is True
+
+
+def gate_message(
+    name: str, args: dict[str, Any], text: str = ""
+) -> tuple[AIMessage, dict[str, Any]]:
+    """A gate tool call made by the graph itself (not by a model), with its own IDs."""
+    call = {
+        "name": name,
+        "args": args,
+        "id": f"{name}-{uuid.uuid4().hex[:12]}",
+        "type": "tool_call",
+    }
+    return AIMessage(content=text, tool_calls=[call], id=f"gate-{uuid.uuid4().hex[:12]}"), call
+
+
+def close_unanswered(messages: Sequence[BaseMessage]) -> list[BaseMessage]:
+    """The history a model may see: a tool call the user never answered (they wrote a message
+    instead) gets a placeholder result, as Chat Completions requires."""
+    answered = {m.tool_call_id for m in messages if isinstance(m, ToolMessage)}
+    result: list[BaseMessage] = []
+    for message in messages:
+        result.append(message)
+        if isinstance(message, AIMessage):
+            for call in message.tool_calls:
+                if call["id"] not in answered:
+                    result.append(
+                        ToolMessage(
+                            "(not answered: the user replied in the chat instead)",
+                            tool_call_id=call["id"],
+                        )
+                    )
+    # A trailing placeholder would hide a call the run is still waiting on; keep the tail as is.
+    while (
+        result and isinstance(result[-1], ToolMessage) and result[-1].tool_call_id not in answered
+    ):
+        result.pop()
+    return result
+
+
+class GapDecision(BaseModel):
+    gap_id: str
+    decision: str
+    text: str = ""
+
+
+def gap_decisions(answer: Any) -> list[GapDecision]:
+    """S6.5: decide_gaps answers a list of {gap_id, decision: answer|accept, text}."""
+    items = answer.get("decisions") if isinstance(answer, dict) else answer
+    decisions: list[GapDecision] = []
+    for item in items if isinstance(items, list) else []:
+        try:
+            decision = GapDecision.model_validate(item)
+        except ValidationError:
+            continue
+        if decision.decision in ("answer", "accept"):
+            decisions.append(decision)
+    return decisions
+
+
+def latest_answer_to(messages: Sequence[BaseMessage], name: str) -> Any:
+    """The parsed content of the newest tool result answering a ``name`` call, if any."""
+    for message in reversed(messages):
+        if isinstance(message, ToolMessage) and call_name(messages, message.tool_call_id) == name:
+            try:
+                return json.loads(message.text)
+            except json.JSONDecodeError:
+                return None
+    return None

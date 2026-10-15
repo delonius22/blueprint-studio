@@ -18,6 +18,7 @@ import { liveState, type SessionState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
+import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
 import { GapRegister } from "./GapRegister";
 import { ScorecardPanel } from "./ScorecardPanel";
@@ -60,6 +61,32 @@ function useGates() {
         args={args}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (answer) => void respond(answer) : undefined}
+        result={result}
+      />
+    ),
+  });
+  useHumanInTheLoop<{ gaps: CardGap[] }>({
+    name: "decide_gaps",
+    description:
+      "The app asks the user to answer or accept each open gap from the design review. " +
+      "Never call this yourself.",
+    parameters: z.object({
+      gaps: z.array(
+        z.object({
+          id: z.string(),
+          lens: z.string(),
+          severity: z.string(),
+          item_ids: z.array(z.string()),
+          risk: z.string(),
+          decision_needed: z.string(),
+        }),
+      ),
+    }),
+    render: ({ args, status, respond, result }) => (
+      <DecideGapsCard
+        args={args}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (decisions) => void respond(decisions) : undefined}
         result={result}
       />
     ),

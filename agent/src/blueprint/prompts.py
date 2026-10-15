@@ -159,7 +159,12 @@ def design_summary(design: Design) -> str:
 
 
 def interviewer_prompt(
-    assets: Assets, stage: str, current_step: int, design: Design, edit_note: str | None = None
+    assets: Assets,
+    stage: str,
+    current_step: int,
+    design: Design,
+    edit_note: str | None = None,
+    gap_answers: str | None = None,
 ) -> str:
     parts = [
         assets.interviewer_instructions.rstrip("\n"),
@@ -176,6 +181,8 @@ def interviewer_prompt(
     ]
     if edit_note:
         parts.append("## Edits made by the user\n" + edit_note)
+    if gap_answers:
+        parts.append("## Gap answers to record\n" + gap_answers)
     return "\n\n".join(parts)
 
 

@@ -23,9 +23,20 @@ from blueprint.design import (
     step_blockers,
     tool_schemas,
 )
-from blueprint.domain import Critique, Design, Model, Scorecard
+from blueprint.domain import Critique, Design, Gap, Model, Scorecard
 from blueprint.edits import edit_note
-from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_approved
+from blueprint.gates import (
+    CONFIRM_STEP,
+    DECIDE_GAPS,
+    GATES,
+    OPEN_GATE_EVENT,
+    close_unanswered,
+    gap_decisions,
+    gate_message,
+    last_answer,
+    latest_answer_to,
+    step_approved,
+)
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
@@ -76,8 +87,40 @@ def _last(state: DesignState) -> BaseMessage | None:
 
 
 def _backend_calls(state: DesignState, message: AIMessage) -> list[dict[str, Any]]:
-    frontend = frontend_names(state)
+    frontend = frontend_names(state) | GATES
     return [dict(call) for call in message.tool_calls if call["name"] not in frontend]
+
+
+def _open_gaps(gaps: list[Gap]) -> list[Gap]:
+    return [g for g in gaps if g.status == "open"]
+
+
+def decide_gaps_args(gaps: list[Gap]) -> dict[str, Any]:
+    """What the decide_gaps card shows: every open gap (S6.5)."""
+    keys = ("id", "lens", "severity", "item_ids", "risk", "decision_needed")
+    return {"gaps": [{k: getattr(g, k) for k in keys} for g in _open_gaps(gaps)]}
+
+
+def gap_answer_note(gaps: list[Gap], messages: list[Any]) -> str | None:
+    """The open gaps the user answered in the newest decide_gaps card, for the interviewer."""
+    answers = {
+        d.gap_id: d.text
+        for d in gap_decisions(latest_answer_to(messages, DECIDE_GAPS))
+        if d.decision == "answer"
+    }
+    lines = [
+        f"- {g.id} ({g.lens}, {g.severity}; items {', '.join(g.item_ids)}): risk: {g.risk} "
+        f"Decision needed: {g.decision_needed} The user's answer: {answers[g.id]}"
+        for g in _open_gaps(gaps)
+        if answers.get(g.id, "").strip()
+    ]
+    if not lines:
+        return None
+    return (
+        "The user answered these gaps from the design review. Record each answer as ordinary "
+        "design items with your tools, using only what the user said, then call resolve_gap with "
+        "the gap ID and the IDs of the items you recorded.\n" + "\n".join(lines)
+    )
 
 
 def _gate_calls(message: AIMessage) -> list[dict[str, Any]]:
@@ -138,6 +181,25 @@ def route_design_tools(state: DesignState) -> str:
     return "interviewer"
 
 
+def gap_followup(gaps: list[Gap]) -> dict[str, Any]:
+    """After gap decisions: prd_draft when none is open, else a new decide_gaps card."""
+    if not _open_gaps(gaps):
+        settled = AIMessage("Every gap is answered or accepted. Next, the PRD draft.")
+        return {"stage": "prd_draft", "messages": [settled]}
+    open_count = len(_open_gaps(gaps))
+    text = f"{open_count} gap{'s are' if open_count != 1 else ' is'} still open; answer or accept {'each' if open_count != 1 else 'it'}."
+    message, call = gate_message(DECIDE_GAPS, decide_gaps_args(gaps), text)
+    return {"stage": "gap_resolution", "messages": [message], "_gate": (message, call)}
+
+
+async def opened(config: RunnableConfig, update: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Open the gate a gap_followup prepared (if any); returns nothing to write."""
+    if update and "_gate" in update:
+        message, call = update.pop("_gate")
+        await open_gate(config, message, call)
+    return {}
+
+
 async def open_gate(config: RunnableConfig, message: AIMessage, call: dict[str, Any]) -> None:
     """Stream a gate tool call to the browser so its card opens (S5.6, S11.4)."""
     await adispatch_custom_event(
@@ -173,12 +235,12 @@ def format_critique(critique: Critique) -> str:
 
 
 def format_scorecard(scorecard: Scorecard) -> str:
-    """The final scorecard as a chat message (FR-9)."""
+    """The final scorecard as a chat message (FR-9): score, quoted evidence, then advice."""
     parts = ["**Final scorecard**"]
     for score in scorecard.dimensions:
-        quotes = "\n".join(f'  > "{quote}"' for quote in score.evidence)
+        quotes = "\n".join(f'> "{quote}"' for quote in score.evidence)
         parts.append(
-            f"**{score.dimension.capitalize()}: {score.score}/4**\n{quotes}\n  Advice: {score.advice}"
+            f"**{score.dimension.capitalize()}: {score.score}/4**\n\n{quotes}\n\nAdvice: {score.advice}"
         )
     return "\n\n".join(parts)
 
@@ -196,10 +258,35 @@ def build_graph(
 
     async def interviewer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         step = state["current_step"]
+        stage = state["stage"]
         design = Design.model_validate(state["design"])
+        gaps = [Gap.model_validate(g) for g in state.get("gaps") or []]
+        update: dict[str, Any] = {}
+        answer = last_answer(list(state["messages"]))
+        if stage == "gap_resolution" and answer and answer[0] == DECIDE_GAPS:
+            # S6.5: acceptances are applied here; answers go to the model to record.
+            for decision in gap_decisions(answer[1].get("decisions")):
+                index = next((i for i, g in enumerate(gaps) if g.id == decision.gap_id), None)
+                if (
+                    index is not None
+                    and gaps[index].status == "open"
+                    and decision.decision == "accept"
+                ):
+                    gaps[index] = gaps[index].model_copy(
+                        update={"status": "accepted", "note": decision.text.strip() or None}
+                    )
+            update["gaps"] = [g.model_dump(mode="json") for g in gaps]
+            note = gap_answer_note(gaps, list(state["messages"]))
+            if note is None:  # nothing to record: settle the stage or ask about what is left
+                followup = gap_followup(gaps)
+                await opened(config, followup)
+                return update | followup
         seen = Design.model_validate(state["agent_design"]) if state.get("agent_design") else None
-        system = interviewer_prompt(assets, state["stage"], step, design, edit_note(seen, design))
-        tools = tool_schemas(bound_tool_names(step)) + frontend_actions(state)
+        gap_note = (
+            gap_answer_note(gaps, list(state["messages"])) if stage == "gap_resolution" else None
+        )
+        system = interviewer_prompt(assets, stage, step, design, edit_note(seen, design), gap_note)
+        tools = tool_schemas(bound_tool_names(step, stage)) + frontend_actions(state)
         # Tool calls are not streamed to the browser: backend calls are internal, and a
         # confirm_step card may only open after design_tools has checked its blockers (S5.6).
         quiet = copilotkit_customize_config(config, emit_tool_calls=False)
@@ -209,7 +296,7 @@ def build_graph(
             reply = await calls.chat(
                 meter,
                 "interview",
-                [SystemMessage(system), *state["messages"]],
+                [SystemMessage(system), *close_unanswered(state["messages"])],
                 quiet,
                 tools,
                 measure_ttft=True,
@@ -217,18 +304,29 @@ def build_graph(
         except ModelCallFailed as failure:
             return {"last_error": failure.info()}  # S13.2: nothing else changes
         # S5.9: the interviewer has now seen this design, including the user's edits.
-        return {
+        update |= {
             "messages": [reply],
             "tokens_used": meter.used,
             "last_error": None,
             "agent_design": design.model_dump(mode="json"),
         }
+        if stage == "gap_resolution" and not reply.tool_calls:
+            # The interviewer is done for now: settle the stage or ask about the open gaps again.
+            followup = gap_followup(gaps)
+            update["stage"] = followup.get("stage", stage)
+            update["messages"] = [reply, *followup.get("messages", [])]
+            await opened(config, followup)
+        return update
 
     async def design_tools(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         last = _last(state)
         assert isinstance(last, AIMessage)
-        draft = Draft(Design.model_validate(state["design"]), dict(state["id_counters"]))
-        allowed = bound_tool_names(state["current_step"])
+        draft = Draft(
+            Design.model_validate(state["design"]),
+            dict(state["id_counters"]),
+            [Gap.model_validate(g) for g in state.get("gaps") or []],
+        )
+        allowed = bound_tool_names(state["current_step"], state["stage"])
         results: list[ToolMessage] = []
         for call in _backend_calls(state, last):
             counters = dict(draft.counters)
@@ -251,12 +349,16 @@ def build_graph(
             else:
                 await open_gate(config, last, call)
         written = draft.design.model_dump(mode="json")
-        return {
+        update: dict[str, Any] = {
             "messages": results,
             "design": written,
             "agent_design": written,
             "id_counters": draft.counters,
+            "gaps": [g.model_dump(mode="json") for g in draft.gaps],
         }
+        if state["stage"] == "gap_resolution" and not _open_gaps(draft.gaps):
+            update["stage"] = "prd_draft"  # S6.5: every gap answered or accepted
+        return update
 
     async def critic(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         """S5.7 approval and S5.8 critique: confirm the step, critique it, move on."""
@@ -369,7 +471,7 @@ def build_graph(
                 error = ModelCallFailed("invalid_output", str(invalid), retryable=True)
                 return {"last_error": error.info(), "tokens_used": meter.used}
             gaps = gap_register(merged.gaps, inputs, design, counters)
-        return {
+        update = {
             "gaps": [gap.model_dump(mode="json") for gap in gaps],
             "id_counters": counters,
             "stage": "gap_resolution" if gaps else "prd_draft",
@@ -377,6 +479,11 @@ def build_graph(
             "last_error": None,
             "messages": [AIMessage(review_summary(gaps))],
         }
+        if gaps:
+            message, call = gate_message(DECIDE_GAPS, decide_gaps_args(gaps), review_summary(gaps))
+            update["messages"] = [message]
+            await open_gate(config, message, call)
+        return update
 
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)

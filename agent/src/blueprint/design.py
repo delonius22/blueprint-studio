@@ -6,6 +6,7 @@ the item with that ID otherwise. IDs come from ``id_counters`` and are never
 reused, even after deletion (S2.5).
 """
 
+import dataclasses
 import json
 import re
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from blueprint.domain import (
     Estimate,
     FailureMode,
     Flow,
+    Gap,
     Model,
     NfrTarget,
     Note,
@@ -281,6 +283,14 @@ class DecideStorageChoiceArgs(Model):
 
 DECIDE_STORAGE_CHOICE = "decide_storage_choice"
 SET_CAP_STANCE = "set_cap_stance"
+RESOLVE_GAP = "resolve_gap"
+
+
+class ResolveGapArgs(Model):
+    gap_id: str = Field(description="The GAP- ID the user answered.")
+    item_ids: list[str] = Field(
+        min_length=1, description="IDs of the design items you recorded from the user's answer."
+    )
 
 
 class DeleteItemArgs(Model):
@@ -293,10 +303,12 @@ DELETE_ITEM = "delete_item"
 STEP_1_EXCLUDED = {"upsert_component", "upsert_flow", "upsert_storage_choice", "upsert_endpoint"}
 
 
-def bound_tool_names(current_step: int) -> list[str]:
+def bound_tool_names(current_step: int, stage: str = "interview") -> list[str]:
     names = [*LIST_TOOLS, DECIDE_STORAGE_CHOICE, SET_CAP_STANCE, DELETE_ITEM]
     if current_step == 1:
         names = [n for n in names if n not in STEP_1_EXCLUDED]
+    if stage == "gap_resolution":
+        names.append(RESOLVE_GAP)  # S5.3
     return names
 
 
@@ -307,6 +319,12 @@ def tool_schemas(names: list[str]) -> list[dict[str, Any]]:
         if name == DELETE_ITEM:
             description = "Delete a design item by its ID. Its ID is never reused."
             parameters = DeleteItemArgs.model_json_schema()
+        elif name == RESOLVE_GAP:
+            description = (
+                "Close a gap the user answered, once their answer is recorded as design items: "
+                "name the gap and the IDs of the items you recorded."
+            )
+            parameters = ResolveGapArgs.model_json_schema()
         elif name == SET_CAP_STANCE:
             description = (
                 "Record the design's CAP stance: CP, AP or mixed, with the rationale. There is one "
@@ -334,10 +352,11 @@ def tool_schemas(names: list[str]) -> list[dict[str, Any]]:
 
 @dataclass
 class Draft:
-    """The design and ID counters being changed by one batch of tool calls."""
+    """The design, ID counters and gaps being changed by one batch of tool calls."""
 
     design: Design
     counters: dict[str, int]
+    gaps: list[Gap] = dataclasses.field(default_factory=list)
 
 
 def _upsert(tool: ListTool, draft: Draft, args: dict[str, Any]) -> str:
@@ -385,6 +404,26 @@ def _decide_storage_choice(draft: Draft, args: dict[str, Any]) -> str:
     return parsed.id
 
 
+def _resolve_gap(draft: Draft, args: dict[str, Any]) -> str:
+    """S6.5: an answered gap is closed with the design items that record the answer."""
+    try:
+        parsed = ResolveGapArgs.model_validate(args)
+    except ValidationError as exc:
+        raise ToolFailure(f"invalid arguments: {_errors(exc)}") from None
+    index = next((i for i, g in enumerate(draft.gaps) if g.id == parsed.gap_id), None)
+    if index is None:
+        raise ToolFailure(f"{parsed.gap_id} is not a gap in the register")
+    if draft.gaps[index].status != "open":
+        raise ToolFailure(f"{parsed.gap_id} is already {draft.gaps[index].status}")
+    unknown = [i for i in parsed.item_ids if i not in all_item_ids(draft.design)]
+    if unknown:
+        raise ToolFailure(f"record the answer first: {', '.join(unknown)} not in the design record")
+    draft.gaps[index] = draft.gaps[index].model_copy(
+        update={"status": "resolved", "resolved_by": list(dict.fromkeys(parsed.item_ids))}
+    )
+    return parsed.gap_id
+
+
 def _delete(draft: Draft, args: dict[str, Any]) -> str:
     try:
         item_id = DeleteItemArgs.model_validate(args).item_id
@@ -415,6 +454,8 @@ def run_tool(name: str, args: dict[str, Any], draft: Draft, allowed: list[str]) 
         return json.dumps({"deleted": _delete(draft, args)})
     if name == DECIDE_STORAGE_CHOICE:
         return json.dumps({"decided": _decide_storage_choice(draft, args)})
+    if name == RESOLVE_GAP:
+        return json.dumps({"resolved": _resolve_gap(draft, args)})
     if name == SET_CAP_STANCE:
         try:
             stance = CapStance.model_validate(args)

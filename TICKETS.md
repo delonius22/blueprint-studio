@@ -216,11 +216,11 @@
 
 **Delivers stories:** US-21, US-22
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `decide_gaps` is a frontend tool with per-gap decisions and "accept all"; answers and acceptances require text where S11.4 says so.
-- [ ] Accepted gaps get `status` `accepted` and the note; answered gaps are recorded through design tools and closed with `resolve_gap`, filling `resolved_by` (S6.5, S5.3).
-- [ ] The review does not re-run; `stage` becomes `prd_draft` when no gap is open (S6.5).
+- [x] `decide_gaps` is a frontend tool with per-gap decisions and "accept all"; answers and acceptances require text where S11.4 says so.
+- [x] Accepted gaps get `status` `accepted` and the note; answered gaps are recorded through design tools and closed with `resolve_gap`, filling `resolved_by` (S6.5, S5.3).
+- [x] The review does not re-run; `stage` becomes `prd_draft` when no gap is open (S6.5).
 
 ---
 
