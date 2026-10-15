@@ -7,3 +7,5 @@ web/playwright-report/
 *.db-wal
 # Written by `next dev` when it detects an AI coding agent
 web/AGENTS.md
+# Local CodeGraph index
+.codegraph/
