@@ -1,5 +1,6 @@
 .card {
   background: var(--surface);
+  color: var(--fg); /* never inherit the chat bubble's colour onto this background */
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;

@@ -50,4 +50,4 @@ def test_compose_starts_three_services_and_keeps_keys_out_of_web() -> None:
     assert "env_file" not in web
     assert "API_KEY" not in web
     agent = services.group(1).split("\n  agent:\n", 1)[1].split("\n  web:\n", 1)[0]
-    assert "env_file: .env" in agent
+    assert "- path: .env" in agent

@@ -211,6 +211,10 @@ function useCanvasEditing(state: SessionState): CanvasEditor {
   };
 }
 
+function NoAddMenu() {
+  return null;
+}
+
 function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
   useGates();
@@ -245,7 +249,8 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
         />
       )}
       <div className={styles.body}>
-        <main className={styles.main}>
+        {/* Focusable so keyboard users can scroll the panel even where it holds no control. */}
+        <main className={styles.main} tabIndex={0} aria-label="Session workspace">
           {state.scorecard && ["interview", "design_review", "gap_resolution"].includes(state.stage) && (
             <ScorecardPanel scorecard={state.scorecard} />
           )}
@@ -267,7 +272,13 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           )}
         </main>
         <aside className={styles.chat} aria-label="Interview chat">
-          <CopilotChat agentId={AGENT_NAME} threadId={session.id} />
+          <CopilotChat
+            agentId={AGENT_NAME}
+            threadId={session.id}
+            // S11.7: the send button gets an accessible name; the attachments menu has nothing to
+            // offer in this app (no attachments, no tools menu), so it is not rendered.
+            input={{ sendButton: { "aria-label": "Send message" }, addMenuButton: NoAddMenu }}
+          />
         </aside>
       </div>
     </div>

@@ -1,0 +1,31 @@
+# End-to-end smoke test (T-20): the stack with a scripted OpenAI-compatible fake model.
+# docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build --wait
+services:
+  fakemodel:
+    image: python:3.14-slim
+    command: ["python", "-I", "/srv/fake_model.py", "9999"]
+    volumes:
+      - ./web/e2e/fake_model.py:/srv/fake_model.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9999/v1/models')"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  agent:
+    environment:
+      MODEL_BASE_URL: http://fakemodel:9999/v1
+      MODEL_API_KEY: e2e-interview-key
+      MODEL_NAME: fake-interview-model
+      REVIEW_MODEL_BASE_URL: http://fakemodel:9999/v1
+      REVIEW_MODEL_API_KEY: e2e-review-key
+      REVIEW_MODEL_NAME: fake-review-model
+      DATABASE_URL: postgresql://blueprint:blueprint@db:5432/blueprint
+      AGENT_URL: http://agent:8000
+    depends_on:
+      fakemodel:
+        condition: service_healthy
+
+  web:
+    ports: !override
+      - "3100:3000"

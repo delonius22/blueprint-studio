@@ -18,7 +18,9 @@ services:
     build:
       context: .
       dockerfile: agent/Dockerfile
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false  # the e2e override supplies its own settings
     # Lets a model server on the host be reached as host.docker.internal on Linux too.
     extra_hosts:
       - "host.docker.internal:host-gateway"

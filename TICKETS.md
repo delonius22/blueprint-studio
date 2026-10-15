@@ -376,9 +376,9 @@
 
 **Delivers stories:** US-49, US-54
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every interactive element is keyboard-operable with an accessible name and meets AA contrast in both themes (S11.7).
-- [ ] An automated accessibility scan of the session list, the workspace in each stage panel, every gate card and the completion view reports no AA violations.
-- [ ] The Playwright smoke test passes end to end and downloads a zip containing every available kind (S10.8).
-- [ ] Five sessions driven concurrently with the fake models all complete with correct, independent state (NFR-12).
+- [x] Every interactive element is keyboard-operable with an accessible name and meets AA contrast in both themes (S11.7).
+- [x] An automated accessibility scan of the session list, the workspace in each stage panel, every gate card and the completion view reports no AA violations.
+- [x] The Playwright smoke test passes end to end and downloads a zip containing every available kind (S10.8).
+- [x] Five sessions driven concurrently with the fake models all complete with correct, independent state (NFR-12).
