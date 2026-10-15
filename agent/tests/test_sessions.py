@@ -239,11 +239,18 @@ async def test_openapi_describes_every_route_with_typed_models(
     assert set(operations) == {
         ("POST", "/api/sessions"), ("GET", "/api/sessions"), ("GET", "/api/sessions/{session_id}"),
         ("PATCH", "/api/sessions/{session_id}"), ("DELETE", "/api/sessions/{session_id}"),
+        ("GET", "/api/sessions/{session_id}/downloads"),
+        ("GET", "/api/sessions/{session_id}/downloads/{kind}"),
     }  # fmt: skip
     for key, op in operations.items():
         for status, response in op["responses"].items():
             if status.startswith("2"):
-                if status != "204":
+                if key[1].endswith("{kind}"):  # a file: every media type is typed as binary
+                    assert all(
+                        c["schema"] == {"type": "string", "format": "binary"}
+                        for c in response["content"].values()
+                    )
+                elif status != "204":
                     assert "$ref" in str(response["content"]["application/json"]["schema"]), key
             else:
                 schema = response["content"]["application/json"]["schema"]

@@ -43,6 +43,12 @@ class GraphSeam:
     async def _sleep(self, seconds: float) -> None:
         self.sleeps.append(seconds)
 
+    async def resync(self, thread_id: str = "session-1") -> dict[str, Any]:
+        """A run that adds no message (what the workspace does on page load)."""
+        await self._ensure_session(thread_id)
+        update: Any = {"messages": []}
+        return dict(await self.graph.ainvoke(update, self.config(thread_id)))
+
     async def retry(self, thread_id: str = "session-1") -> dict[str, Any]:
         """What the workspace's Retry action does: clear last_error and run with no new message."""
         update: Any = {

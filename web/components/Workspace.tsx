@@ -14,11 +14,14 @@ import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
-import { liveState, type SessionState } from "../lib/state";
+import { liveState, type PrdDoc, type SessionState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
+import { SignOffCard } from "./gates/SignOffCard";
+import { DownloadsMenu } from "./DownloadsMenu";
+import { PrdViewer } from "./PrdViewer";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
 import { GapRegister } from "./GapRegister";
 import { ScorecardPanel } from "./ScorecardPanel";
@@ -87,6 +90,19 @@ function useGates() {
         args={args}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (decisions) => void respond(decisions) : undefined}
+        result={result}
+      />
+    ),
+  });
+  useHumanInTheLoop<{ prd: PrdDoc }>({
+    name: "sign_off_prd",
+    description: "The app asks the user to sign off PRD v1.0 or reject it with a reason. Never call this yourself.",
+    parameters: z.object({ prd: z.any() }),
+    render: ({ args, status, respond, result }) => (
+      <SignOffCard
+        args={args as Partial<{ prd: PrdDoc }>}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (answer) => void respond(answer) : undefined}
         result={result}
       />
     ),
@@ -167,6 +183,11 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           confirmedSteps={state.confirmed_steps}
         />
         <TokenMeter used={state.tokens_used} budget={state.token_budget} />
+        <DownloadsMenu
+          sessionId={session.id}
+          sessionName={session.name}
+          refreshKey={`${state.stage}-${state.prd_versions.length}`}
+        />
       </header>
       <ReviewModelWarning distinct={state.review_model_distinct} />
       {lastError.visible && (
@@ -179,13 +200,17 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
       )}
       <div className={styles.body}>
         <main className={styles.main}>
-          {state.scorecard && <ScorecardPanel scorecard={state.scorecard} />}
+          {state.scorecard && ["interview", "design_review", "gap_resolution"].includes(state.stage) && (
+            <ScorecardPanel scorecard={state.scorecard} />
+          )}
           {state.stage === "interview" ? (
             <CanvasEditContext.Provider value={editor}>
               <Canvas design={state.design} />
             </CanvasEditContext.Provider>
-          ) : (
+          ) : state.stage === "design_review" || state.stage === "gap_resolution" ? (
             <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
+          ) : (
+            <PrdViewer draft={state.prd_draft ?? null} versions={state.prd_versions} stage={state.stage} />
           )}
         </main>
         <aside className={styles.chat} aria-label="Interview chat">

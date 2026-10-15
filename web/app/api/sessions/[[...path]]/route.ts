@@ -14,8 +14,10 @@ async function forward(request: Request): Promise<Response> {
     cache: "no-store",
   });
   const headers = new Headers();
-  const type = response.headers.get("content-type");
-  if (type) headers.set("content-type", type);
+  for (const name of ["content-type", "content-disposition"]) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
   return new Response(response.status === 204 ? null : await response.arrayBuffer(), {
     status: response.status,
     headers,

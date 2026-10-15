@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from fakes import ScriptedChatModel
+from fakes import ScriptedChatModel, prd_out
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from seam import GraphSeam
 
@@ -70,7 +70,8 @@ async def gaps(seam: GraphSeam) -> dict[str, dict[str, Any]]:
 
 
 async def test_accepted_gaps_get_status_and_note_and_the_stage_moves_on() -> None:
-    seam = resolving()
+    draft = prd_out({"Short links": ["FR-1"]}, {"GAP-1": ["Short links"], "GAP-2": ["Short links"]})
+    seam = resolving(draft)
     card = await open_card(seam)
 
     await seam.answer(
@@ -84,8 +85,11 @@ async def test_accepted_gaps_get_status_and_note_and_the_stage_moves_on() -> Non
     )
     assert (register["GAP-2"]["status"], register["GAP-2"]["note"]) == ("accepted", None)
     state = await seam.state()
-    assert state["stage"] == "prd_draft"
-    assert seam.interview.calls == [] and seam.review.calls == []  # nothing to record, no re-review
+    assert state["stage"] == "prd_signoff"  # all settled: the PRD draft followed at once
+    assert [c.structured_method for c in seam.interview.calls] == [
+        "json_schema"
+    ]  # only the drafter
+    assert seam.review.calls == []  # no re-review
 
 
 async def test_an_answered_gap_is_recorded_as_design_items_and_resolved() -> None:
@@ -95,6 +99,7 @@ async def test_an_answered_gap_is_recorded_as_design_items_and_resolved() -> Non
             {"name": "resolve_gap", "args": {"gap_id": "GAP-1", "item_ids": ["FR-2"]}, "id": "c2"},
         ]),
         AIMessage("Recorded FR-2 and closed GAP-1."),
+        prd_out({"Short links": ["FR-1", "FR-2"]}, {"GAP-2": ["Short links"]}),
     )  # fmt: skip
     card = await open_card(seam)
 
@@ -116,7 +121,7 @@ async def test_an_answered_gap_is_recorded_as_design_items_and_resolved() -> Non
     assert register["GAP-2"]["status"] == "accepted"
     state = await seam.state()
     assert [r["id"] for r in state["design"]["functional_requirements"]] == ["FR-1", "FR-2"]
-    assert state["stage"] == "prd_draft"
+    assert state["stage"] == "prd_signoff"
     assert seam.review.calls == []
 
 

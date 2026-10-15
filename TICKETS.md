@@ -232,15 +232,15 @@
 
 **Delivers stories:** US-24, US-25, US-26, US-27, US-36
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `PrdDoc`, `Feature`, `PrdRequirement`, `PrdNfr` and `PrdVersion` exist as S2.10 and S2.12 define.
-- [ ] The `prd_drafter` behaves as S7.1 defines; a graph-seam test shows FR and NFR statements in the draft are byte-identical to the design record.
-- [ ] Validation and its one retry behave as S7.2 defines.
-- [ ] `sign_off_prd` approval and rejection behave as S7.3 and S7.4 define; a signed-off version is never modified.
-- [ ] The PRD viewer shows the draft and every version with a version switcher (S11.2).
-- [ ] The download listing and file routes of S10.3 exist, backed by pure renderers (S10.1); `prd-v1.0.docx` renders as S10.4 defines and is `409` before sign-off.
-- [ ] The file opens without a repair prompt in Word 365, LibreOffice 24+ and Google Docs (NFR-11).
+- [x] `PrdDoc`, `Feature`, `PrdRequirement`, `PrdNfr` and `PrdVersion` exist as S2.10 and S2.12 define.
+- [x] The `prd_drafter` behaves as S7.1 defines; a graph-seam test shows FR and NFR statements in the draft are byte-identical to the design record.
+- [x] Validation and its one retry behave as S7.2 defines.
+- [x] `sign_off_prd` approval and rejection behave as S7.3 and S7.4 define; a signed-off version is never modified.
+- [x] The PRD viewer shows the draft and every version with a version switcher (S11.2).
+- [x] The download listing and file routes of S10.3 exist, backed by pure renderers (S10.1); `prd-v1.0.docx` renders as S10.4 defines and is `409` before sign-off.
+- [x] The file opens without a repair prompt in Word 365, LibreOffice 24+ and Google Docs (NFR-11).
 
 ---
 

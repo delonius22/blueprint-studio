@@ -18,6 +18,8 @@ export type CachePolicy = Schemas["CachePolicy"];
 export type FailureMode = Schemas["FailureMode"];
 export type Scorecard = Schemas["Scorecard"];
 export type Gap = Schemas["Gap"];
+export type PrdDoc = Schemas["PrdDoc"];
+export type PrdVersion = Schemas["PrdVersion"];
 
 /** "EP-1: POST /urls" for any design item ID, or the bare ID if it is unknown. */
 export function itemLabel(design: Design, id: string): string {

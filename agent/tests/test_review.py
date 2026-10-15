@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from fakes import RoutedChatModel, ScriptedChatModel
+from fakes import RoutedChatModel, ScriptedChatModel, prd_out
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from seam import GraphSeam
 
@@ -159,12 +159,12 @@ async def test_a_finding_that_proposes_a_new_component_adds_no_design_item_or_re
 
 async def test_zero_gaps_goes_straight_to_the_prd_draft() -> None:
     review = judge({})
-    seam = at_review(review)
+    seam = at_review(review, ScriptedChatModel.with_script(prd_out({"Short links": ["FR-1"]})))
     await seam.send("review please")
     state = await seam.state()
-    assert (state["stage"], state["gaps"]) == ("prd_draft", [])
+    assert (state["stage"], state["gaps"], state["last_error"]) == ("prd_signoff", [], None)
     assert len(review.calls) == 3  # nothing to merge, so no merger call
-    assert "found no gaps" in state["messages"][-1].text
+    assert any("found no gaps" in m.text for m in state["messages"])
 
 
 async def test_review_tokens_are_counted_under_the_review_role() -> None:
@@ -185,7 +185,8 @@ async def test_a_failed_reviewer_sets_last_error_and_retry_reruns_the_review() -
             return error
         return {"findings": []} if lens_of(messages) else {"gaps": []}
 
-    seam = at_review(RoutedChatModel.answering(flaky))
+    draft = ScriptedChatModel.with_script(prd_out({"Short links": ["FR-1"]}))
+    seam = at_review(RoutedChatModel.answering(flaky), draft)
     await seam.send("review please")
     state = await seam.state()
     assert (state["stage"], state["gaps"], state["last_error"]["code"]) == (
@@ -196,7 +197,7 @@ async def test_a_failed_reviewer_sets_last_error_and_retry_reruns_the_review() -
 
     await seam.retry()
     state = await seam.state()
-    assert (state["stage"], state["last_error"]) == ("prd_draft", None)
+    assert (state["stage"], state["last_error"]) == ("prd_signoff", None)  # no gaps: on to the PRD
 
 
 async def test_the_review_starts_when_step_5_is_approved() -> None:

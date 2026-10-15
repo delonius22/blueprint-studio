@@ -4,6 +4,7 @@ Nodes do the work; routing functions are pure functions of state (S5.1).
 """
 
 import json
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from copilotkit.langgraph import copilotkit_customize_config
@@ -23,13 +24,14 @@ from blueprint.design import (
     step_blockers,
     tool_schemas,
 )
-from blueprint.domain import Critique, Design, Gap, Model, Scorecard
+from blueprint.domain import Critique, Design, Gap, Model, PrdDoc, PrdVersion, Scorecard
 from blueprint.edits import edit_note
 from blueprint.gates import (
     CONFIRM_STEP,
     DECIDE_GAPS,
     GATES,
     OPEN_GATE_EVENT,
+    SIGN_OFF_PRD,
     close_unanswered,
     gap_decisions,
     gate_message,
@@ -39,6 +41,7 @@ from blueprint.gates import (
 )
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
+from blueprint.prd import PrdDraftOut, build_prd, draft_problems, drafter_messages, signoff_summary
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
 from blueprint.review import (
     LENSES,
@@ -148,7 +151,11 @@ def route_start(state: DesignState) -> str | list[str]:
         name, content = answer
         if name == CONFIRM_STEP and step_approved(content):
             return "critic"
+        if name == SIGN_OFF_PRD:
+            return "prd_drafter"  # S7.3, S7.4
         return "interviewer"
+    if state.get("stage") == "prd_draft":
+        return "prd_drafter"
     if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
@@ -162,12 +169,22 @@ def route_critic(state: DesignState) -> str | list[str]:
 
 
 def route_interviewer(state: DesignState) -> str:
-    """Backend calls and confirm_step go to design_tools; a text reply or an error ends the run."""
+    """Backend calls and confirm_step go to design_tools; a text reply or an error ends the run,
+    unless every gap is settled, when the PRD draft starts (S6.5)."""
     if state.get("last_error"):
         return END
     last = _last(state)
     if isinstance(last, AIMessage) and (_backend_calls(state, last) or _gate_calls(last)):
         return "design_tools"
+    if state.get("stage") == "prd_draft":
+        return "prd_drafter"
+    return END
+
+
+def route_gap_merger(state: DesignState) -> str:
+    """Zero gaps goes straight to the PRD draft (S6.4)."""
+    if not state.get("last_error") and state.get("stage") == "prd_draft":
+        return "prd_drafter"
     return END
 
 
@@ -179,6 +196,11 @@ def route_design_tools(state: DesignState) -> str:
     if turn and any(call["id"] not in answered for call in turn.tool_calls):
         return END
     return "interviewer"
+
+
+def utc_now() -> str:
+    """ISO 8601 UTC, to the second: the approval time a PRD version is frozen with (S2.12)."""
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def gap_followup(gaps: list[Gap]) -> dict[str, Any]:
@@ -286,7 +308,13 @@ def build_graph(
             gap_answer_note(gaps, list(state["messages"])) if stage == "gap_resolution" else None
         )
         system = interviewer_prompt(assets, stage, step, design, edit_note(seen, design), gap_note)
-        tools = tool_schemas(bound_tool_names(step, stage)) + frontend_actions(state)
+        # Design tools exist only while the design is being made (interview, gap answers).
+        backend = (
+            tool_schemas(bound_tool_names(step, stage))
+            if stage in ("interview", "gap_resolution")
+            else []
+        )
+        tools = backend + frontend_actions(state)
         # Tool calls are not streamed to the browser: backend calls are internal, and a
         # confirm_step card may only open after design_tools has checked its blockers (S5.6).
         quiet = copilotkit_customize_config(config, emit_tool_calls=False)
@@ -485,6 +513,76 @@ def build_graph(
             await open_gate(config, message, call)
         return update
 
+    async def prd_drafter(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
+        """S7.1-S7.4: draft PRD v1.0, open sign_off_prd, and act on the user's answer."""
+        previous = PrdDoc.model_validate(state["prd_draft"]) if state.get("prd_draft") else None
+        answer = last_answer(list(state["messages"]))
+        reason = None
+        if answer is not None and answer[0] == SIGN_OFF_PRD and state["stage"] == "prd_signoff":
+            if step_approved(answer[1]) and previous is not None:
+                version = PrdVersion(version="1.0", approved_at=utc_now(), doc=previous)
+                return {
+                    "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
+                    "stage": "spec_synthesis",
+                    "last_error": None,
+                    "messages": [
+                        AIMessage("PRD v1.0 is signed off and frozen. You can download it now.")
+                    ],
+                }
+            reason = str(answer[1].get("reason") or "").strip() or "The user rejected the draft."
+        design = Design.model_validate(state["design"])
+        gaps = [Gap.model_validate(g) for g in state.get("gaps") or []]
+        accepted = [g for g in gaps if g.status == "accepted"]
+        counters = dict(state["id_counters"])
+        meter = Meter.for_node(state, "prd_drafter")
+        prompt = drafter_messages(design, accepted, previous, reason)
+        problems: list[str] = []
+        try:
+            for _attempt in range(2):  # S7.2: one corrective retry
+                try:
+                    out = await calls.structured(meter, "interview", PrdDraftOut, prompt, config)
+                    problems = draft_problems(out, design, accepted)
+                except InvalidStructuredOutput as invalid:
+                    problems = [str(invalid)]
+                if not problems:
+                    break
+                prompt = [
+                    *prompt,
+                    HumanMessage(
+                        "Your draft could not be used. Fix these and answer again:\n- "
+                        + "\n- ".join(problems)
+                    ),
+                ]
+        except ModelCallFailed as failure:
+            return {"last_error": failure.info()}
+        if problems:
+            error = ModelCallFailed(
+                "invalid_output",
+                "The PRD draft broke its rules: " + "; ".join(problems),
+                retryable=True,
+            )
+            return {"last_error": error.info(), "tokens_used": meter.used}
+        doc = build_prd(out, design, accepted, counters, previous)
+        features_of = {g.id: g.feature_ids for g in doc.open_gaps}
+        message, call = gate_message(
+            SIGN_OFF_PRD, {"prd": doc.model_dump(mode="json")}, signoff_summary(doc)
+        )
+        await open_gate(config, message, call)
+        return {
+            "prd_draft": doc.model_dump(mode="json"),
+            "gaps": [
+                g.model_copy(
+                    update={"feature_ids": features_of.get(g.id, g.feature_ids)}
+                ).model_dump(mode="json")
+                for g in gaps
+            ],
+            "id_counters": counters,
+            "stage": "prd_signoff",
+            "tokens_used": meter.used,
+            "last_error": None,
+            "messages": [message],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
@@ -492,10 +590,16 @@ def build_graph(
     for lens, name in zip(LENSES, REVIEWERS, strict=True):
         builder.add_node(name, reviewer(lens), input_schema=ReviewChannel)
     builder.add_node("gap_merger", gap_merger, input_schema=ReviewChannel)
-    builder.add_conditional_edges(START, route_start, ["interviewer", "critic", *REVIEWERS, END])
+    builder.add_node("prd_drafter", prd_drafter)
+    builder.add_conditional_edges(
+        START, route_start, ["interviewer", "critic", *REVIEWERS, "prd_drafter", END]
+    )
     builder.add_conditional_edges("critic", route_critic, [*REVIEWERS, END])
     builder.add_edge(REVIEWERS, "gap_merger")
-    builder.add_edge("gap_merger", END)
-    builder.add_conditional_edges("interviewer", route_interviewer, ["design_tools", END])
+    builder.add_conditional_edges("gap_merger", route_gap_merger, ["prd_drafter", END])
+    builder.add_edge("prd_drafter", END)
+    builder.add_conditional_edges(
+        "interviewer", route_interviewer, ["design_tools", "prd_drafter", END]
+    )
     builder.add_conditional_edges("design_tools", route_design_tools, ["interviewer", END])
     return builder.compile(checkpointer=checkpointer)

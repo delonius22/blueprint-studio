@@ -219,3 +219,29 @@ class RoutedChatModel(ScriptedChatModel):
             return {"raw": raw, "parsed": parsed, "parsing_error": None} if include_raw else parsed
 
         return RunnableLambda(answer)
+
+
+def prd_out(
+    groups: dict[str, list[str]], gap_features: dict[str, list[str]] | None = None
+) -> dict[str, Any]:
+    """A PRD v1.0 draft as the drafter model returns it: feature name -> FR IDs."""
+    refs = {name: f"f{i + 1}" for i, name in enumerate(groups)}
+    return {
+        "problem_statement": "Long URLs are hard to share.",
+        "goals": ["Short links that always redirect"],
+        "users": ["Anonymous web users"],
+        "features": [
+            {
+                "ref": refs[name],
+                "name": name,
+                "description": f"{name} description",
+                "requirement_ids": ids,
+            }
+            for name, ids in groups.items()
+        ],
+        "scope": ["Creating and resolving short links"],
+        "gap_features": [
+            {"gap_id": gap, "feature_refs": [refs[n] for n in names]}
+            for gap, names in (gap_features or {}).items()
+        ],
+    }

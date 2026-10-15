@@ -5,6 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import datetime
 from typing import Annotated, Any, Self
+from urllib.parse import quote
 
 from ag_ui.core import (
     CustomEvent,
@@ -24,6 +25,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from blueprint import downloads
 from blueprint.edits import apply_browser_write
 from blueprint.gates import OPEN_GATE_EVENT
 from blueprint.state import SESSION_FIELDS, SessionState, new_session_state
@@ -109,6 +111,31 @@ class SessionDetail(SessionSummary):
     state: SessionState = Field(
         description="The session state (SPECS S2.2) without messages or CopilotKit's field"
     )
+
+
+class DownloadItem(BaseModel):
+    """S10.3: one download kind, whether it is available and, if not, why."""
+
+    kind: str
+    available: bool
+    reason: str | None
+
+
+FILE_RESPONSE: dict[int | str, dict[str, Any]] = {
+    200: {
+        "description": "The file, as an attachment named per SPECS S10.2",
+        "content": {
+            media: {"schema": {"type": "string", "format": "binary"}}
+            for media in sorted({k.media_type for k in downloads.KINDS.values()})
+        },
+    }
+}
+
+
+def content_disposition(file_name: str) -> str:
+    """An attachment header that keeps non-ASCII session names (RFC 6266, RFC 5987)."""
+    fallback = "".join(c if c.isascii() and c not in '"\\' else "_" for c in file_name)
+    return f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(file_name, safe='')}"
 
 
 def summary(row: SessionRow) -> SessionSummary:
@@ -208,6 +235,43 @@ def session_routes(
         values = {k: v for k, v in snapshot.values.items() if k in SESSION_FIELDS}
         state = SessionState.model_validate(values)
         return SessionDetail(**summary(row).model_dump(), state=state)
+
+    async def session_state(session_id: str) -> SessionState:
+        values = (await graph.aget_state(config(session_id))).values
+        return SessionState.model_validate({k: v for k, v in values.items() if k in SESSION_FIELDS})
+
+    @router.get(
+        "/{session_id}/downloads", response_model=list[DownloadItem], responses=errors(404, 422)
+    )
+    async def list_downloads(session_id: str) -> list[DownloadItem]:
+        await existing(session_id)
+        state = await session_state(session_id)
+        return [
+            DownloadItem(kind=kind, available=reason is None, reason=reason)
+            for kind in downloads.KINDS
+            for reason in [downloads.unmet(state, kind)]
+        ]
+
+    @router.get(
+        "/{session_id}/downloads/{kind}",
+        response_class=Response,
+        responses=FILE_RESPONSE | errors(404, 409, 422),
+    )
+    async def download(session_id: str, kind: str) -> Response:
+        row = await existing(session_id)
+        if kind not in downloads.KINDS:
+            raise ApiError(404, "unknown_kind", f"{kind} is not a download kind")
+        state = await session_state(session_id)
+        reason = downloads.unmet(state, kind)
+        if reason is not None:
+            raise ApiError(409, "not_available", f"{kind} is not available: {reason}")
+        spec = downloads.KINDS[kind]
+        body = downloads.render(state, kind, row.name)
+        return Response(
+            content=body,
+            media_type=spec.media_type,
+            headers={"content-disposition": content_disposition(spec.file_name(row.name))},
+        )
 
     @router.patch("/{session_id}", response_model=SessionSummary, responses=errors(404, 422))
     async def rename_session(session_id: str, body: SessionName) -> SessionSummary:

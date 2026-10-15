@@ -124,6 +124,7 @@ async def assemble(runtime: Runtime, pool: AsyncConnectionPool[Any]) -> FastAPI:
     await store.setup()
     graph = build_graph(runtime.models, checkpointer, runtime.assets)
     app = create_app(graph, store)
+    app.state.graph = graph  # for operators' scripts and tests; the API never needs it
     app.include_router(
         session_routes(
             store,
