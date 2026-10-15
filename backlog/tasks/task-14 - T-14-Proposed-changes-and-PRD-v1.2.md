@@ -1,9 +1,11 @@
 ---
 id: TASK-14
 title: 'T-14: Proposed changes and PRD v1.2'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-14 22:19'
+updated_date: '2026-10-15 01:51'
 labels: []
 dependencies:
   - TASK-13
@@ -29,3 +31,9 @@ Mirrors T-14 in TICKETS.md, which is authoritative.
 - [ ] #3 A graph-seam test shows v1.0 and v1.1 are unchanged after v1.2 is created, and later stages read v1.2 as the current PRD (S2.12, S8.6).
 - [ ] #4 `prd-v1.2.docx` renders with its "Changes from v1.1" table (S10.4).
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Blocked on Q-11 (S8.5 does not define how an approved proposed change is applied to structured sections). Implementation in progress on branch T-14 with reading (a).
+<!-- SECTION:NOTES:END -->

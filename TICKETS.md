@@ -270,7 +270,7 @@
 
 **Delivers stories:** US-30, US-36
 
-**Status:** ready-for-agent
+**Status:** blocked-on-question
 
 - [ ] `ProposedChange` exists as S2.13 defines.
 - [ ] `review_changes` and the `change_applier` behave as S8.5 defines; no v1.2 is created when every change is rejected.
