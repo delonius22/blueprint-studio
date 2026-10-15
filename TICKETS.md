@@ -340,12 +340,12 @@
 
 **Delivers stories:** US-43, US-44, US-45
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The completion view renders from the S10.3 listing (S11.5), and the `completer` posts the downloads message (S9.4).
-- [ ] `bundle.zip` contains every available kind except itself, with the file names of S10.2 (S10.8).
-- [ ] Rendering every kind twice from the same state yields byte-identical files, Word documents and zip included (S10.9, FR-28).
-- [ ] With a 50-ticket fixture, generating `bundle.zip` takes at most 10 s at p95 over 20 runs, and each download logs `export_ms` (NFR-2, S13.5).
+- [x] The completion view renders from the S10.3 listing (S11.5), and the `completer` posts the downloads message (S9.4).
+- [x] `bundle.zip` contains every available kind except itself, with the file names of S10.2 (S10.8).
+- [x] Rendering every kind twice from the same state yields byte-identical files, Word documents and zip included (S10.9, FR-28).
+- [x] With a 50-ticket fixture, generating `bundle.zip` takes at most 10 s at p95 over 20 runs, and each download logs `export_ms` (NFR-2, S13.5).
 
 ---
 

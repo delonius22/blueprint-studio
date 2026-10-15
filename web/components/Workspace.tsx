@@ -22,6 +22,7 @@ import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
 import { ReviewTicketsCard } from "./gates/ReviewTicketsCard";
 import { TicketView } from "./TicketView";
+import { CompletionView } from "./CompletionView";
 import { type CardChange, ReviewChangesCard } from "./gates/ReviewChangesCard";
 import { SignOffCard } from "./gates/SignOffCard";
 import { DownloadsMenu } from "./DownloadsMenu";
@@ -254,7 +255,12 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             </CanvasEditContext.Provider>
           ) : state.stage === "design_review" || state.stage === "gap_resolution" ? (
             <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
-          ) : ["ticket_breakdown", "ticket_gate", "complete"].includes(state.stage) ? (
+          ) : state.stage === "complete" ? (
+            <>
+              <CompletionView sessionId={session.id} sessionName={session.name} />
+              <TicketView tickets={state.tickets} stage={state.stage} />
+            </>
+          ) : ["ticket_breakdown", "ticket_gate"].includes(state.stage) ? (
             <TicketView tickets={state.tickets} stage={state.stage} />
           ) : (
             <PrdViewer draft={state.prd_draft ?? null} versions={state.prd_versions} stage={state.stage} />

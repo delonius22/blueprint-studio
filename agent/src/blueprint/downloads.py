@@ -7,6 +7,7 @@ no model call (S10.1). Availability is decided here, never in the browser.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from blueprint.exports.bundle_zip import render_bundle
 from blueprint.exports.context_md import render_context
 from blueprint.exports.delivery_docx import render_requirements, render_user_stories
 from blueprint.exports.prd_docx import render_prd
@@ -44,6 +45,19 @@ RENDERERS: dict[str, Renderer] = {
     "user-stories.docx": render_user_stories,
     "context.md": render_context,
 }
+
+
+def _bundle(state: SessionState, session_name: str) -> bytes:
+    """S10.8: every available kind except the bundle itself."""
+    entries = [
+        (KINDS[kind].file_name(session_name), RENDERERS[kind](state, session_name))
+        for kind in KINDS
+        if kind != "bundle.zip" and unmet(state, kind) is None
+    ]
+    return render_bundle(state, entries)
+
+
+RENDERERS["bundle.zip"] = _bundle
 
 
 def unmet(state: SessionState, kind: str) -> str | None:
