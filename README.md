@@ -1,37 +1,74 @@
-# Blueprint Studio — planning package
+# Blueprint Studio
 
-Everything Claude Code needs to build Blueprint Studio, plus the same plan as Word documents for people.
+A web app where an AI agent walks you through the five-step system-design framework. A second model then reviews the design for security, efficiency and maintainability gaps. The app drafts a PRD for you to sign off, extends it with `to-spec`, breaks it into tickets with `to-tickets`, and hands back Word documents plus a `context.md` that any agent can follow to create the Jira issues.
 
-**Blueprint Studio** is a web app where an AI agent, built with CopilotKit and LangGraph (Python) and runnable on any capable model, guides a user through the five-step system-design framework. A second model then reviews the design for security, efficiency and maintainability gaps. The app drafts a PRD the user signs off, extends it with `to-spec`, breaks it into tickets with `to-tickets`, and hands back Word documents plus a `context.md` that any agent can follow to create the Jira issues.
+Built with CopilotKit and LangGraph (Python). It runs on any OpenAI-compatible model endpoint.
 
-## How to start the build
+## Run it
 
-1. Open this folder in Claude Code.
-2. Paste the contents of `KICKOFF.md` as your first message.
-3. Claude Code reports its understanding, checks versions, builds T-01 and stops for your review. Say "go" and it works through T-02 to T-20.
+You need Docker with Compose.
 
-Have your `.env` ready: a base URL, API token and model name for each role (`MODEL_*` for the interview model, `REVIEW_MODEL_*` for the design judge), plus a `DATABASE_URL`. Any OpenAI-compatible endpoint works; see `MODEL-CONNECTION.md`.
+```sh
+cp .env.example .env    # fill in both model roles (see below)
+docker compose up --build
+```
 
-## What's here
+Then open <http://localhost:3000>.
 
-| File | For | What it is |
+The app uses two model roles, each configured by a base URL, an API key and a model name:
+
+| Role | Variables | Used for |
 |---|---|---|
-| `KICKOFF.md` | You → Claude Code | The first prompt to paste |
-| `CLAUDE.md` | Claude Code | The build brief, loaded automatically: closed ticket list, working loop, layout, how to handle ambiguity |
-| `PRD.md` | Both | Problem, solution, 7 features, 29 functional and 13 non-functional requirements, 55 user stories, decisions, open questions |
-| `SPECS.md` | Claude Code | 87 numbered technical clauses (`S#.#`) that every ticket cites |
-| `MODEL-CONNECTION.md` | Claude Code | One OpenAI-compatible connection per model role (base URL, token, model name); overrides SPECS §1 where they differ |
-| `TICKETS.md` | Both | The 20 approved tickets with acceptance criteria, blocking edges and build waves |
-| `app-assets/` | The app's agent | Runtime prompts shipped inside the app, verbatim: interviewer instructions, course context, design-judge reviewer and merge prompts, `to-spec`, `to-tickets`, MIT licence |
-| `docs/PRD.docx` | People | The PRD as a Word document |
-| `docs/Requirements.docx` | People | Requirements with features and story coverage |
-| `docs/UserStories.docx` | People | Stories by feature, tickets with acceptance criteria, build waves |
-| `docs/context.md` | Any agent | This project's own Jira hand-off. Fill in the site and project key, then give it to an agent to create the epics, stories and tasks. It is also the reference example for the format the app generates. |
+| Interview | `MODEL_BASE_URL`, `MODEL_API_KEY`, `MODEL_NAME` | The interviewer, critiques, PRD drafting, `to-spec`, `to-tickets` |
+| Review | `REVIEW_MODEL_BASE_URL`, `REVIEW_MODEL_API_KEY`, `REVIEW_MODEL_NAME` | The design judge: security, efficiency and maintainability reviewers and the gap merger |
 
-## Decisions worth knowing before you read
+- **Endpoints:** any OpenAI-compatible Chat Completions endpoint works, including OpenAI, Anthropic's compatibility endpoint, a gateway such as LiteLLM or OpenRouter, or a local server such as Ollama.
+- **Startup check:** both models must support tool calling and structured output, and the agent checks this at startup.
+- **Use two different models:** if both roles point at the same model, the review still runs, but the app warns that the cross-model check is off.
+- **Other settings:** `.env.example` documents the rest.
 
-- **No skeleton stage, no code generation** for designed systems. The app stops at documents and the Jira hand-off.
-- **Two model roles** (interview and review), configured separately. The app warns when both are the same model.
-- **Sign-off is binding.** PRD v1.0 is frozen once signed. `to-spec` extends it into v1.1 without changing it, and any change goes through per-item approval into v1.2.
-- **Nothing unapproved reaches Jira.** Open gaps never become tickets; `context.md` forbids the receiving agent from adding anything.
-- **Python 3.14, not 3.15.** 3.15 shipped on 9 October 2026, but LangGraph's checkpointer depends on `ormsgpack`, which has no 3.15 wheel yet.
+All model calls go through one factory, `agent/src/blueprint/models.py`. API keys stay in the agent container and never reach the web container.
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `agent/` | Python 3.14 service (FastAPI, LangGraph, CopilotKit, python-docx), managed with `uv` |
+| `web/` | Next.js 16 App Router front end with the CopilotKit v2 hooks |
+| `app-assets/` | Runtime prompts the agent ships verbatim: interviewer instructions, course context, design-judge prompts, `to-spec`, `to-tickets` and their MIT licence |
+| `docker-compose.yml` | Postgres, agent and web |
+| `docker-compose.e2e.yml` | Override for the end-to-end test that swaps in a scripted fake model |
+
+## Develop and test
+
+No API key or network access is needed: the tests use scripted fake models.
+
+```sh
+# Agent: lint, types, tests (the tests start a throwaway postgres:16 container, so Docker must be running)
+cd agent
+uv sync
+uv run ruff check . && uv run mypy && uv run pytest
+
+# Web: types, unit tests, end-to-end smoke test
+cd web
+npm ci
+npx tsc --noEmit && npm test
+npx playwright install chromium
+npm run test:e2e        # builds and starts the full stack, then runs five sessions to zip download
+```
+
+The end-to-end test is in `web/e2e/smoke.spec.ts`:
+- **What it runs:** five concurrent sessions, each from creating the session to downloading the zip.
+- **Accessibility:** it scans the pages for WCAG 2.1 AA in light and dark themes.
+- **Reusing a running stack:** set `E2E_REUSE_STACK=1` to use a stack that's already up.
+
+## Design documents
+
+| File | What it is |
+|---|---|
+| `PRD.md` | Problem, features, functional and non-functional requirements, user stories, decisions (`D#`) |
+| `SPECS.md` | The numbered technical clauses (`S#.#`) that the code and tests cite |
+| `MODEL-CONNECTION.md` | How the app connects to models; overrides SPECS §1 where they differ |
+| `TICKETS.md` | The 20 tickets the app was built from, with acceptance criteria |
+| `QUESTIONS.md` | Conflicts and questions raised during the build, and how each was settled |
+| `docs/` | The PRD, requirements and user stories as Word documents, plus an example `context.md` Jira hand-off |
