@@ -10,9 +10,10 @@ from collections.abc import Sequence
 from typing import Any
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from blueprint.assets import Assets
+from blueprint.changes import change_problem
 from blueprint.design import issue_id
 from blueprint.domain import (
     SIGNED_OFF_SECTIONS,
@@ -135,6 +136,15 @@ def spec_problems(out: SpecOut, signed: PrdDoc) -> list[str]:
             problems.append(
                 f"proposed change {i} has kind {change.kind}; use add, modify or remove"
             )
+        elif change.section in SIGNED_OFF_SECTIONS:
+            try:
+                candidate = ProposedChange.model_validate({"id": f"CHG-{i}", **change.model_dump()})
+            except ValidationError as exc:
+                problems.append(f"proposed change {i} is incomplete: {exc.errors()[0]['msg']}")
+                continue
+            problem = change_problem(candidate, signed)
+            if problem:
+                problems.append(f"proposed change {i} cannot be applied: {problem}")
     return problems
 
 

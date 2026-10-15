@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from blueprint.assets import Assets
+from blueprint.changes import apply_changes, change_decisions
 from blueprint.design import (
     Draft,
     ToolFailure,
@@ -31,6 +32,7 @@ from blueprint.domain import (
     Model,
     PrdDoc,
     PrdVersion,
+    ProposedChange,
     Scorecard,
     Seam,
     Ticket,
@@ -42,6 +44,7 @@ from blueprint.gates import (
     DECIDE_GAPS,
     GATES,
     OPEN_GATE_EVENT,
+    REVIEW_CHANGES,
     REVIEW_TICKETS,
     SIGN_OFF_PRD,
     close_unanswered,
@@ -208,7 +211,11 @@ def route_start(state: DesignState) -> str | list[str]:
             return "seam_proposer"  # S8.3, S8.4
         if name == REVIEW_TICKETS:
             return "completer" if content.get("decision") == "approve" else "ticket_planner"  # S9.4
+        if name == REVIEW_CHANGES:
+            return "change_applier"  # S8.5
         return "interviewer"
+    if pending_gate(messages):
+        return END  # a card is waiting: a run that adds nothing never opens it again
     stage = state.get("stage")
     if stage == "prd_draft":
         return "prd_drafter"
@@ -218,6 +225,8 @@ def route_start(state: DesignState) -> str | list[str]:
         return END  # a card is waiting: a run that adds nothing never opens it again
     if stage == "seam_gate" and not state.get("seams"):
         return "seam_proposer"
+    if stage == "change_review":
+        return "change_applier"
     if stage == "ticket_breakdown":
         return "ticket_planner"
     if isinstance(_last(state), HumanMessage):
@@ -253,7 +262,19 @@ def route_prd_drafter(state: DesignState) -> str:
 
 
 def route_seam_proposer(state: DesignState) -> str:
-    """Approved seams with no proposed changes go straight to the tickets (S8.4)."""
+    """Approved seams go to the change review when synthesis proposed changes, otherwise
+    straight to the tickets (S8.4)."""
+    if state.get("last_error"):
+        return END
+    if state.get("stage") == "change_review":
+        return "change_applier"
+    if state.get("stage") == "ticket_breakdown":
+        return "ticket_planner"
+    return END
+
+
+def route_change_applier(state: DesignState) -> str:
+    """Once every change is decided, the tickets are planned from the current PRD (S8.5, S8.6)."""
     if not state.get("last_error") and state.get("stage") == "ticket_breakdown":
         return "ticket_planner"
     return END
@@ -881,6 +902,51 @@ def build_graph(
             ],
         }
 
+    async def change_applier(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
+        """S8.5: ask about each proposed change; apply the approved ones as PRD v1.2."""
+        changes = [ProposedChange.model_validate(c) for c in state.get("proposed_changes") or []]
+        answer = last_answer(list(state["messages"]))
+        if answer is None or answer[0] != REVIEW_CHANGES:
+            pending = [c for c in changes if c.decision == "pending"]
+            text = f"Synthesis proposed {len(pending)} change{'s' if len(pending) != 1 else ''} to signed-off content. Approve or reject each one."
+            message, call = gate_message(
+                REVIEW_CHANGES, {"changes": [c.model_dump(mode="json") for c in pending]}, text
+            )
+            await open_gate(config, message, call)
+            return {"messages": [message], "last_error": None}
+        decisions = change_decisions(answer[1].get("decisions"))
+        decided = [
+            c.model_copy(update={"decision": decisions.get(c.id, "rejected")})
+            if c.decision == "pending"
+            else c
+            for c in changes
+        ]
+        approved = [c for c in decided if c.decision == "approved"]
+        update: dict[str, Any] = {
+            "proposed_changes": [c.model_dump(mode="json") for c in decided],
+            "stage": "ticket_breakdown",
+            "last_error": None,
+        }
+        if not approved:
+            update["messages"] = [
+                AIMessage("Every proposed change was rejected; PRD v1.1 stays the current PRD.")
+            ]
+            return update
+        counters = dict(state["id_counters"])
+        base = PrdDoc.model_validate(state["prd_versions"][-1]["doc"])
+        changed = apply_changes(base, approved, counters)
+        version = PrdVersion(version="1.2", approved_at=utc_now(), doc=changed)
+        return update | {
+            "id_counters": counters,
+            "prd_draft": changed.model_dump(mode="json"),
+            "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
+            "messages": [
+                AIMessage(
+                    f"PRD v1.2 is frozen with {len(approved)} approved change{'s' if len(approved) != 1 else ''}. You can download it now."
+                )
+            ],
+        }
+
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
     builder.add_node("design_tools", design_tools)
@@ -894,6 +960,7 @@ def build_graph(
     builder.add_node("ticket_planner", ticket_planner, input_schema=PlanningChannel)
     builder.add_node("dag_validator", dag_validator, input_schema=PlanningChannel)
     builder.add_node("completer", completer)
+    builder.add_node("change_applier", change_applier)
     builder.add_conditional_edges(
         START,
         route_start,
@@ -906,6 +973,7 @@ def build_graph(
             "seam_proposer",
             "ticket_planner",
             "completer",
+            "change_applier",
             END,
         ],
     )
@@ -916,7 +984,10 @@ def build_graph(
     builder.add_conditional_edges(
         "spec_synthesizer", route_spec_synthesizer, ["seam_proposer", END]
     )
-    builder.add_conditional_edges("seam_proposer", route_seam_proposer, ["ticket_planner", END])
+    builder.add_conditional_edges(
+        "seam_proposer", route_seam_proposer, ["change_applier", "ticket_planner", END]
+    )
+    builder.add_conditional_edges("change_applier", route_change_applier, ["ticket_planner", END])
     builder.add_conditional_edges("ticket_planner", route_ticket_planner, ["dag_validator", END])
     builder.add_conditional_edges("dag_validator", route_dag_validator, ["ticket_planner", END])
     builder.add_edge("completer", END)

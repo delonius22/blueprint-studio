@@ -270,12 +270,12 @@
 
 **Delivers stories:** US-30, US-36
 
-**Status:** blocked-on-question
+**Status:** done
 
-- [ ] `ProposedChange` exists as S2.13 defines.
-- [ ] `review_changes` and the `change_applier` behave as S8.5 defines; no v1.2 is created when every change is rejected.
-- [ ] A graph-seam test shows v1.0 and v1.1 are unchanged after v1.2 is created, and later stages read v1.2 as the current PRD (S2.12, S8.6).
-- [ ] `prd-v1.2.docx` renders with its "Changes from v1.1" table (S10.4).
+- [x] `ProposedChange` exists as S2.13 defines.
+- [x] `review_changes` and the `change_applier` behave as S8.5 defines; no v1.2 is created when every change is rejected.
+- [x] A graph-seam test shows v1.0 and v1.1 are unchanged after v1.2 is created, and later stages read v1.2 as the current PRD (S2.12, S8.6).
+- [x] `prd-v1.2.docx` renders with its "Changes from v1.1" table (S10.4).
 
 ---
 

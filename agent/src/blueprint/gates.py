@@ -18,6 +18,7 @@ DECIDE_GAPS = "decide_gaps"
 SIGN_OFF_PRD = "sign_off_prd"
 APPROVE_SEAMS = "approve_seams"
 REVIEW_TICKETS = "review_tickets"
+REVIEW_CHANGES = "review_changes"
 # Every approval gate (S11.4); the graph never executes these, the user answers them.
 GATES = frozenset(
     {CONFIRM_STEP, DECIDE_GAPS, "sign_off_prd", "approve_seams", "review_changes", "review_tickets"}

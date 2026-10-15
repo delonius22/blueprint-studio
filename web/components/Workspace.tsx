@@ -22,6 +22,7 @@ import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
 import { ReviewTicketsCard } from "./gates/ReviewTicketsCard";
 import { TicketView } from "./TicketView";
+import { type CardChange, ReviewChangesCard } from "./gates/ReviewChangesCard";
 import { SignOffCard } from "./gates/SignOffCard";
 import { DownloadsMenu } from "./DownloadsMenu";
 import { PrdViewer } from "./PrdViewer";
@@ -121,6 +122,19 @@ function useGates() {
         args={args}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (answer) => void respond(answer) : undefined}
+        result={result}
+      />
+    ),
+  });
+  useHumanInTheLoop<{ changes: CardChange[] }>({
+    name: "review_changes",
+    description: "The app asks the user to approve or reject each proposed change to the signed-off PRD. Never call this yourself.",
+    parameters: z.object({ changes: z.array(z.any()) }),
+    render: ({ args, status, respond, result }) => (
+      <ReviewChangesCard
+        args={args as Partial<{ changes: CardChange[] }>}
+        status={String(status) as "inProgress" | "executing" | "complete"}
+        respond={respond ? (decisions) => void respond(decisions) : undefined}
         result={result}
       />
     ),
