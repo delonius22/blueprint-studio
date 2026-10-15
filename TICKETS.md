@@ -162,12 +162,12 @@
 
 **Delivers stories:** US-16
 
-**Status:** blocked-on-question
+**Status:** done
 
-- [ ] SPOF, signal, trade-off and extension types and tools exist (S2.7, S5.3).
-- [ ] Confirming Step 4 with no SPOF, or an unmitigated SPOF, returns the blocker and opens no card (S5.6).
-- [ ] After Step 5 approval the critic stores a scorecard with five dimension scores, quoted evidence and advice, and sets `stage` to `design_review` (S5.8, S2.8).
-- [ ] The scorecard is shown in the workspace.
+- [x] SPOF, signal, trade-off and extension types and tools exist (S2.7, S5.3).
+- [x] Confirming Step 4 with no SPOF, or an unmitigated SPOF, returns the blocker and opens no card (S5.6).
+- [x] After Step 5 approval the critic stores a scorecard with five dimension scores, quoted evidence and advice, and sets `stage` to `design_review` (S5.8, S2.8).
+- [x] The scorecard is shown in the workspace.
 
 ---
 

@@ -18,6 +18,7 @@ import { liveState } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
+import { ScorecardPanel } from "./ScorecardPanel";
 import { StageTracker } from "./StageTracker";
 import { TokenMeter } from "./TokenMeter";
 import styles from "./Workspace.module.css";
@@ -130,6 +131,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
       )}
       <div className={styles.body}>
         <main className={styles.main}>
+          {state.scorecard && <ScorecardPanel scorecard={state.scorecard} />}
           <Canvas design={state.design} />
         </main>
         <aside className={styles.chat} aria-label="Interview chat">

@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import END
 from seam import GraphSeam
 
-from blueprint.domain import Design, FailureMode
+from blueprint.domain import Component, Design, FailureMode, Spof
 from blueprint.graph import route_design_tools, route_interviewer, route_start
 
 CONFIRM_STEP = {
@@ -24,6 +24,14 @@ CRITIQUE = {
     "strengths": ["Clear functional scope (FR-1)"],
     "bottlenecks": ["No availability target yet"],
     "questions": ["What happens when a short code collides?"],
+}
+
+
+SCORECARD = {
+    "dimensions": [
+        {"dimension": d, "score": 3, "evidence": ["step 1 done"], "advice": "Keep going."}
+        for d in ("communication", "structure", "judgment", "depth", "time")
+    ]
 }
 
 
@@ -90,13 +98,19 @@ async def test_steps_advance_one_at_a_time_through_step_5() -> None:
     script: list[Any] = []
     for step in range(1, 6):
         script += [confirm(step, f"gate-{step}"), CRITIQUE]
+    script.append(SCORECARD)
     design = Design(
-        failure_modes=[FailureMode(id="FM-1", scenario="DB primary fails", behaviour="Failover")]
+        components=[Component(id="CMP-1", name="DB", kind="database", responsibility="store")],
+        failure_modes=[FailureMode(id="FM-1", scenario="DB primary fails", behaviour="Failover")],
+        spofs=[Spof(id="SPOF-1", component_id="CMP-1", risk="down", mitigation="replica")],
     )
     seam = GraphSeam(
         ScriptedChatModel.with_script(*script),
         frontend_tools=[CONFIRM_STEP],
-        initial={"design": design.model_dump(mode="json"), "id_counters": {"FM": 1}},
+        initial={
+            "design": design.model_dump(mode="json"),
+            "id_counters": {"CMP": 1, "FM": 1, "SPOF": 1},
+        },
     )
     for step in range(1, 6):
         await seam.send(f"step {step} done")

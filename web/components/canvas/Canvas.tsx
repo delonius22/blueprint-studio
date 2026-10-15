@@ -223,6 +223,57 @@ export function Canvas({ design }: { design: Design }) {
           <DiagramPanel design={design} />
         </div>
       </div>
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Step 4 · Scale & reliability</h3>
+        <div className={styles.grid}>
+          <Panel
+            title="Single points of failure"
+            items={design.spofs.map((s) => ({
+              id: s.id,
+              content: (
+                <>
+                  {named(design.components, s.component_id)}: {s.risk}
+                  <div className={s.mitigation ? styles.detail : styles.missing}>
+                    Mitigation: {s.mitigation || "none yet"}
+                  </div>
+                </>
+              ),
+            }))}
+          />
+          <Panel
+            title="Observability"
+            items={design.observability.map((o) => ({
+              id: o.id,
+              content: (
+                <>
+                  <span className={styles.tag}>{o.kind}</span> {o.name}
+                  {o.threshold && <div className={styles.detail}>Threshold: {o.threshold}</div>}
+                </>
+              ),
+            }))}
+          />
+        </div>
+      </div>
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Step 5 · Trade-offs & extensions</h3>
+        <div className={styles.grid}>
+          <Panel
+            title="Trade-offs"
+            items={design.tradeoffs.map((t) => ({
+              id: t.id,
+              content: (
+                <>
+                  {t.decision}
+                  <div className={styles.detail}>
+                    Gained: {t.gained} · Sacrificed: {t.sacrificed}
+                  </div>
+                </>
+              ),
+            }))}
+          />
+          <Panel title="Extensions" items={design.extensions.map((e) => ({ id: e.id, content: e.text }))} />
+        </div>
+      </div>
     </div>
   );
 }

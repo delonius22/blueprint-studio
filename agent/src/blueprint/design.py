@@ -29,7 +29,10 @@ from blueprint.domain import (
     Note,
     Relationship,
     Requirement,
+    Signal,
+    Spof,
     StorageChoice,
+    Tradeoff,
 )
 
 ID_PATTERN = re.compile(r"^([A-Z]+)-(\d+)$")
@@ -235,6 +238,33 @@ LIST_TOOLS: dict[str, ListTool] = {
             "Record a failure mode the user has reasoned about: the scenario, how the system "
             "behaves, and how it recovers." + _UPSERT,
         ),
+        _list_tool(
+            "upsert_spof",
+            "spofs",
+            Spof,
+            "Record a single point of failure: the component (by component ID), the risk, and "
+            "the mitigation once the user has decided one." + _UPSERT,
+        ),
+        _list_tool(
+            "upsert_signal",
+            "observability",
+            Signal,
+            "Record an observability signal: a log, metric, trace, alert or health check, with "
+            "its threshold when one applies." + _UPSERT,
+        ),
+        _list_tool(
+            "upsert_tradeoff",
+            "tradeoffs",
+            Tradeoff,
+            "Record a trade-off: the decision, what it gained and what it sacrificed." + _UPSERT,
+        ),
+        _list_tool(
+            "upsert_extension",
+            "extensions",
+            Note,
+            "Record a future extension the user proposed, such as how the design would change "
+            "at 10x load or across regions." + _UPSERT,
+        ),
     )
 }
 
@@ -408,4 +438,16 @@ def step_blockers(step: int, design: Design) -> list[str]:
     blockers: list[str] = []
     if step == 3 and not design.failure_modes:
         blockers.append("Step 3 needs at least one failure mode (upsert_failure_mode).")
+    if step == 4:
+        if not design.spofs:
+            blockers.append("Step 4 needs at least one single point of failure (upsert_spof).")
+        unmitigated = [spof.id for spof in design.spofs if not (spof.mitigation or "").strip()]
+        if unmitigated:
+            blockers.append(
+                f"Step 4 needs a mitigation for every single point of failure: "
+                f"{', '.join(unmitigated)} has none."
+                if len(unmitigated) == 1
+                else f"Step 4 needs a mitigation for every single point of failure: "
+                f"{', '.join(unmitigated)} have none."
+            )
     return blockers

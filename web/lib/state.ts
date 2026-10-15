@@ -16,6 +16,7 @@ export type Component = Schemas["Component"];
 export type Flow = Schemas["Flow"];
 export type CachePolicy = Schemas["CachePolicy"];
 export type FailureMode = Schemas["FailureMode"];
+export type Scorecard = Schemas["Scorecard"];
 
 export const EMPTY_DESIGN: Design = {
   functional_requirements: [],

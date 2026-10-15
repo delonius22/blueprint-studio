@@ -42,7 +42,7 @@ describe("Canvas", () => {
 
   it("shows empty panels before anything is recorded", () => {
     render(<Canvas design={EMPTY_DESIGN} />);
-    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(13);
+    expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(17);
   });
 });
 

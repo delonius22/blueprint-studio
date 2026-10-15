@@ -6,9 +6,9 @@ nodes validate into these models before using it. Every model forbids unknown
 fields (S2.7).
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Stage = Literal[
     "interview",
@@ -252,7 +252,15 @@ class DimensionScore(Model):
 
 
 class Scorecard(Model):
+    """Exactly five scores, one per dimension, in the order of DIMENSIONS (S2.8)."""
+
     dimensions: Annotated[list[DimensionScore], Field(min_length=5, max_length=5)]
+
+    @model_validator(mode="after")
+    def one_per_dimension(self) -> Self:
+        if tuple(d.dimension for d in self.dimensions) != DIMENSIONS:
+            raise ValueError(f"needs one score per dimension, in order: {', '.join(DIMENSIONS)}")
+        return self
 
 
 # --- S2.9 gaps -------------------------------------------------------------------------------

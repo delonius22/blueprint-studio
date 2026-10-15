@@ -1278,6 +1278,7 @@
       },
       "Scorecard": {
         "additionalProperties": false,
+        "description": "Exactly five scores, one per dimension, in the order of DIMENSIONS (S2.8).",
         "properties": {
           "dimensions": {
             "items": {

@@ -522,7 +522,10 @@ export interface components {
             /** Statement */
             statement: string;
         };
-        /** Scorecard */
+        /**
+         * Scorecard
+         * @description Exactly five scores, one per dimension, in the order of DIMENSIONS (S2.8).
+         */
         Scorecard: {
             /** Dimensions */
             dimensions: components["schemas"]["DimensionScore"][];

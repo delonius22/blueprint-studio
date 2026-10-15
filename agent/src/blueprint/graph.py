@@ -23,11 +23,12 @@ from blueprint.design import (
     step_blockers,
     tool_schemas,
 )
-from blueprint.domain import Critique, Design, Model
+from blueprint.domain import Critique, Design, Model, Scorecard
 from blueprint.gates import CONFIRM_STEP, OPEN_GATE_EVENT, last_answer, step_approved
 from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
 from blueprint.models import RoleModels
 from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
+from blueprint.scoring import ScorecardError, make_scorecard
 from blueprint.state import DesignState
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]
@@ -136,6 +137,17 @@ def format_critique(critique: Critique) -> str:
     )
 
 
+def format_scorecard(scorecard: Scorecard) -> str:
+    """The final scorecard as a chat message (FR-9)."""
+    parts = ["**Final scorecard**"]
+    for score in scorecard.dimensions:
+        quotes = "\n".join(f'  > "{quote}"' for quote in score.evidence)
+        parts.append(
+            f"**{score.dimension.capitalize()}: {score.score}/4**\n{quotes}\n  Advice: {score.advice}"
+        )
+    return "\n\n".join(parts)
+
+
 # --- nodes -----------------------------------------------------------------------------------
 
 
@@ -226,14 +238,35 @@ def build_graph(
             error = ModelCallFailed("invalid_output", str(invalid), retryable=True)
             return {"last_error": error.info(), "tokens_used": meter.used}
         critique = Critique(step=step, **draft.model_dump())
-        return {
+        update: dict[str, Any] = {
             "tokens_used": meter.used,
             "last_error": None,
             "confirmed_steps": sorted({*state["confirmed_steps"], step}),
             "current_step": min(step + 1, 5),
             "critiques": [*state["critiques"], critique.model_dump(mode="json")],
-            "messages": [AIMessage(format_critique(critique))],
         }
+        messages = [AIMessage(format_critique(critique))]
+        if step == 5:
+            try:
+                scorecard = await make_scorecard(
+                    calls, meter, assets, design, state["messages"], config
+                )
+            except ModelCallFailed as failure:
+                return {"last_error": failure.info()}  # S13.2: the critique is not stored either
+            except ScorecardError as invalid:
+                error = ModelCallFailed(
+                    "invalid_output",
+                    f"The scorecard could not be produced: {invalid}",
+                    retryable=True,
+                )
+                return {"last_error": error.info(), "tokens_used": meter.used}
+            update |= {
+                "scorecard": scorecard.model_dump(mode="json"),
+                "stage": "design_review",
+                "tokens_used": meter.used,
+            }
+            messages.append(AIMessage(format_scorecard(scorecard)))
+        return update | {"messages": messages}
 
     builder = StateGraph(DesignState)
     builder.add_node("interviewer", interviewer)
