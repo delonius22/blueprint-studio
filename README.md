@@ -46,7 +46,9 @@ To use a local Postgres instead of SQLite, set `DATABASE_URL=postgresql://<user>
 
 To run the two processes yourself instead of using the launcher:
 - **Agent:** in `agent/`, run `uv run --env-file ../.env python -m blueprint`.
-- **Web app:** in `web/`, run `npm ci`, then `npm run build`, then `AGENT_URL=http://127.0.0.1:8000 npm start`.
+- **Web app:** in `web/`, run `npm ci`, then `npm run build`, then `AGENT_URL=http://127.0.0.1:8000 npm start`. On Windows PowerShell, set the address first with `$env:AGENT_URL="http://127.0.0.1:8000"`.
+
+`npm start` warns that it "does not work with output: standalone". The app runs normally anyway; the setting is there for the server image.
 
 ### Server mode
 
@@ -85,7 +87,7 @@ All model calls go through one factory, `agent/src/blueprint/models.py`. API key
 
 ## Develop and test
 
-No API key or network access is needed: the tests use scripted fake models.
+No API key is needed: the tests use scripted fake models. The first `uv sync` and `npm ci` download packages.
 
 ```sh
 # Agent: lint, types, tests
@@ -94,11 +96,11 @@ uv sync
 uv run ruff check . && uv run mypy && uv run pytest
 
 # Web: types, unit tests, end-to-end smoke test
-cd web
+cd ../web
 npm ci
 npx tsc --noEmit && npm test
 npx playwright install chromium
-npm run test:e2e        # builds and starts the full stack, then runs five sessions to zip download
+npm run test:e2e        # needs Docker: builds the server stack, then runs five sessions to zip download
 ```
 
 - **Postgres tests (server mode):** these start a throwaway `postgres:16` container, or use the database in `TEST_DATABASE_URL`. On a machine with neither, they are skipped. The SQLite tests for local mode need nothing.
