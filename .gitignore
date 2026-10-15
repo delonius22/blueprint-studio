@@ -1,3 +1,9 @@
 .env
 web/test-results/
 web/playwright-report/
+# Local mode's SQLite database
+*.db
+*.db-shm
+*.db-wal
+# Written by `next dev` when it detects an AI coding agent
+web/AGENTS.md

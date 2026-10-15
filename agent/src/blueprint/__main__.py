@@ -3,14 +3,25 @@
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 import uvicorn
+from fastapi import FastAPI
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from blueprint import log
-from blueprint.app import apply_tracing, assemble, prepare
+from blueprint.app import apply_tracing, assemble, assemble_from, prepare
 from blueprint.errors import StartupError
+from blueprint.settings import Settings
+from blueprint.sqlite import open_sqlite, sqlite_path
+
+
+async def _listen(app: FastAPI, settings: Settings) -> None:
+    server = uvicorn.Server(
+        uvicorn.Config(app, host=settings.host, port=settings.port, log_config=None)
+    )
+    await server.serve()
 
 
 async def serve() -> None:
@@ -29,16 +40,19 @@ async def serve() -> None:
     check = "skipped" if settings.skip_model_check else "passed for both roles"
     log.log_event("startup", message=f"startup model check {check}")
     log.log_event("startup", message=f"review_model_distinct={runtime.review_model_distinct}")
+    database_url = settings.database_url.get_secret_value()
+    path = sqlite_path(database_url)
+    if path is not None:
+        log.log_event("startup", message=f"local mode: SQLite database {Path(path).resolve()}")
+        async with open_sqlite(path) as (checkpointer, store):
+            await _listen(assemble_from(runtime, checkpointer, store), settings)
+        return
     async with AsyncConnectionPool(
-        settings.database_url.get_secret_value(),
+        database_url,
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
         open=False,
     ) as pool:
-        app = await assemble(runtime, pool)
-        server = uvicorn.Server(
-            uvicorn.Config(app, host=settings.host, port=settings.port, log_config=None)
-        )
-        await server.serve()
+        await _listen(await assemble(runtime, pool), settings)
 
 
 def main() -> None:

@@ -1,14 +1,16 @@
 """The ``sessions`` table: name, stage and timestamps for listing (PRD D10, SPECS S3.2).
 
 Graph state lives in the LangGraph checkpointer under thread ID = session ID
-(S4.2); this table only holds what the session list needs.
+(S4.2); this table only holds what the session list needs. This module holds the
+store interface and its Postgres implementation (server mode); ``blueprint.sqlite``
+holds the SQLite one (local mode).
 """
 
 import base64
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 from psycopg_pool import AsyncConnectionPool
 
@@ -57,11 +59,36 @@ def decode_cursor(cursor: str) -> tuple[datetime, str]:
         raise InvalidCursor("cursor is not valid") from exc
 
 
+def split_page(rows: list[SessionRow], limit: int) -> tuple[list[SessionRow], str | None]:
+    """Rows fetched with ``LIMIT limit + 1``: the page and the cursor of the next one, if any."""
+    if len(rows) > limit:
+        return rows[:limit], encode_cursor(rows[limit - 1])
+    return rows, None
+
+
+class SessionStore(Protocol):
+    """What the session API and the agent endpoint need from the ``sessions`` table."""
+
+    async def create(
+        self, session_id: str, name: str, stage: str, current_step: int
+    ) -> SessionRow: ...
+
+    async def get(self, session_id: str) -> SessionRow | None: ...
+
+    async def page(self, limit: int, cursor: str | None) -> tuple[list[SessionRow], str | None]: ...
+
+    async def rename(self, session_id: str, name: str) -> SessionRow | None: ...
+
+    async def record_progress(self, session_id: str, stage: str, current_step: int) -> None: ...
+
+    async def delete(self, session_id: str) -> None: ...
+
+
 def _row(record: dict[str, Any]) -> SessionRow:
     return SessionRow(**record)
 
 
-class SessionStore:
+class PostgresSessionStore:
     def __init__(self, pool: AsyncConnectionPool[Any]) -> None:
         self.pool = pool
 
@@ -99,9 +126,7 @@ class SessionStore:
         params.append(limit + 1)
         async with self.pool.connection() as conn:
             rows = [_row(r) for r in await (await conn.execute(query, params)).fetchall()]
-        if len(rows) > limit:
-            return rows[:limit], encode_cursor(rows[limit - 1])
-        return rows, None
+        return split_page(rows, limit)
 
     async def rename(self, session_id: str, name: str) -> SessionRow | None:
         async with self.pool.connection() as conn:

@@ -1,4 +1,6 @@
-# One command, one .env (SPECS S1.1, S1.2): docker compose up
+# Server mode (SPECS S1.1, S1.2): docker compose up, with Postgres. The model settings come
+# from .env; the database and agent addresses are fixed here, so a .env written for local
+# mode (SQLite, localhost) works unchanged. Local mode without Docker: scripts/run_local.py.
 services:
   db:
     image: postgres:16
@@ -21,6 +23,10 @@ services:
     env_file:
       - path: .env
         required: false  # the e2e override supplies its own settings
+    environment:
+      DATABASE_URL: postgresql://blueprint:blueprint@db:5432/blueprint
+      HOST: 0.0.0.0
+      PORT: "8000"
     # Lets a model server on the host be reached as host.docker.internal on Linux too.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -37,7 +43,7 @@ services:
     build: ./web
     # Only the agent's address: provider keys never reach the web container (S1.5).
     environment:
-      AGENT_URL: ${AGENT_URL:-http://agent:8000}
+      AGENT_URL: http://agent:8000
       COPILOTKIT_TELEMETRY_DISABLED: "true"
     ports:
       - "3000:3000"

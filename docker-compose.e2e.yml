@@ -20,8 +20,6 @@ services:
       REVIEW_MODEL_BASE_URL: http://fakemodel:9999/v1
       REVIEW_MODEL_API_KEY: e2e-review-key
       REVIEW_MODEL_NAME: fake-review-model
-      DATABASE_URL: postgresql://blueprint:blueprint@db:5432/blueprint
-      AGENT_URL: http://agent:8000
     depends_on:
       fakemodel:
         condition: service_healthy

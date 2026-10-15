@@ -51,3 +51,16 @@ def test_compose_starts_three_services_and_keeps_keys_out_of_web() -> None:
     assert "API_KEY" not in web
     agent = services.group(1).split("\n  agent:\n", 1)[1].split("\n  web:\n", 1)[0]
     assert "- path: .env" in agent
+
+
+def test_server_mode_pins_postgres_and_addresses_whatever_env_says() -> None:
+    """.env.example is written for local mode; compose overrides its local-only settings."""
+    text = (REPO_ROOT / "docker-compose.yml").read_text()
+    agent = text.split("\n  agent:\n", 1)[1].split("\n  web:\n", 1)[0]
+    web = text.split("\n  web:\n", 1)[1]
+    assert "DATABASE_URL: postgresql://blueprint:blueprint@db:5432/blueprint" in agent
+    assert "HOST: 0.0.0.0" in agent and 'PORT: "8000"' in agent
+    assert "AGENT_URL: http://agent:8000" in web and "${" not in web
+    example = _assignments((REPO_ROOT / ".env.example").read_text(), commented=False)
+    assert example["DATABASE_URL"].startswith("sqlite:///")
+    assert example["AGENT_URL"] == "http://127.0.0.1:8000"

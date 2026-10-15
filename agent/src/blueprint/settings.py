@@ -79,6 +79,20 @@ def _boolean(environ: Mapping[str, str], name: str, default: bool) -> bool:
     raise ConfigError(f"{name} must be true or false, got {raw!r}")
 
 
+DATABASE_SCHEMES = ("postgresql://", "postgres://", "sqlite:///")
+
+
+def _database_url(environ: Mapping[str, str]) -> str:
+    """Postgres for the server (Docker Compose), a SQLite file for local runs."""
+    url = _required(environ, "DATABASE_URL")
+    if not url.startswith(DATABASE_SCHEMES):
+        # Never echo the URL: it may hold a password.
+        raise ConfigError(
+            "DATABASE_URL must start with postgresql:// (server) or sqlite:/// (local)"
+        )
+    return url
+
+
 def _role(environ: Mapping[str, str], prefix: str) -> RoleConfig:
     return RoleConfig(
         base_url=_required(environ, f"{prefix}_BASE_URL"),
@@ -92,7 +106,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
     return Settings(
         interview=_role(environ, "MODEL"),
         review=_role(environ, "REVIEW_MODEL"),
-        database_url=SecretStr(_required(environ, "DATABASE_URL")),
+        database_url=SecretStr(_database_url(environ)),
         session_token_budget=_integer(environ, "SESSION_TOKEN_BUDGET", 2_000_000, 1, 10**12),
         langsmith_tracing=_boolean(environ, "LANGSMITH_TRACING", False),
         skip_model_check=_boolean(environ, "SKIP_MODEL_CHECK", False),

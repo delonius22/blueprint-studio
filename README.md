@@ -6,14 +6,57 @@ Built with CopilotKit and LangGraph (Python). It runs on any OpenAI-compatible m
 
 ## Run it
 
-You need Docker with Compose.
+There are two modes. Both read the same `.env`:
 
 ```sh
 cp .env.example .env    # fill in both model roles (see below)
+```
+
+| | Local mode | Server mode |
+|---|---|---|
+| For | Your own machine, no Docker | A server, in containers |
+| Start | `python3 scripts/run_local.py` | `docker compose up --build` |
+| Needs | [uv](https://docs.astral.sh/uv/), Node.js 24 and any Python 3 | Docker with Compose |
+| Database | A SQLite file, `agent/blueprint.db`: nothing to install | Postgres, in its own container |
+| Opens at | <http://localhost:3000> | <http://localhost:3000> |
+
+### Local mode
+
+```sh
+python3 scripts/run_local.py           # Windows: py scripts\run_local.py
+```
+
+The launcher:
+- installs the web app's packages on first run;
+- starts the agent, letting `uv` download Python 3.14 and the agent's packages on first run;
+- waits for the agent's startup model check;
+- starts the web app.
+
+Ctrl+C stops everything.
+
+| Option | What it does |
+|---|---|
+| (none) | Runs the web app's development server, which picks up code changes |
+| `--prod` | Builds and serves the production web app instead |
+| `--port <n>` | Uses another web port |
+
+Sessions are kept in `agent/blueprint.db`. Delete that file to start fresh.
+
+To use a local Postgres instead of SQLite, set `DATABASE_URL=postgresql://<user>:<password>@localhost:5432/<database>`. The agent creates its tables on first start.
+
+To run the two processes yourself instead of using the launcher:
+- **Agent:** in `agent/`, run `uv run --env-file ../.env python -m blueprint`.
+- **Web app:** in `web/`, run `npm ci`, then `npm run build`, then `AGENT_URL=http://127.0.0.1:8000 npm start`.
+
+### Server mode
+
+```sh
 docker compose up --build
 ```
 
-Then open <http://localhost:3000>.
+Compose runs Postgres, the agent and the web app. The model settings come from `.env`. Compose fixes `DATABASE_URL`, `AGENT_URL`, `HOST` and `PORT` itself, so a `.env` written for local mode works unchanged.
+
+### Models
 
 The app uses two model roles, each configured by a base URL, an API key and a model name:
 
@@ -27,41 +70,7 @@ The app uses two model roles, each configured by a base URL, an API key and a mo
 - **Use two different models:** if both roles point at the same model, the review still runs, but the app warns that the cross-model check is off.
 - **Other settings:** `.env.example` documents the rest.
 
-All model calls go through one factory, `agent/src/blueprint/models.py`. API keys stay in the agent container and never reach the web container.
-
-## Run without Docker
-
-You need these on the machine:
-- [uv](https://docs.astral.sh/uv/), which downloads Python 3.14 itself if it's missing.
-- Node.js 24.
-- A Postgres database. Either install Postgres locally and create an empty database (`createuser -P blueprint` then `createdb -O blueprint blueprint`), or use a hosted Postgres such as Neon or Supabase.
-
-The agent creates its tables on first start.
-
-In `.env`, point two settings at your machine instead of the Docker service names:
-
-```sh
-DATABASE_URL=postgresql://blueprint:<password>@localhost:5432/blueprint
-AGENT_URL=http://localhost:8000
-```
-
-Then start the agent and the web app in two terminals:
-
-```sh
-# Terminal 1: the agent, on port 8000
-cd agent
-uv run --env-file ../.env python -m blueprint    # installs Python 3.14 and dependencies on first run
-
-# Terminal 2: the web app, on port 3000
-cd web
-npm ci
-npm run build
-AGENT_URL=http://localhost:8000 npm start
-```
-
-- **Windows (PowerShell):** set the variable first with `$env:AGENT_URL="http://localhost:8000"`, then run `npm start`.
-- **Startup warning:** `next start` warns that it "does not work with output: standalone". That warning is harmless here: the app runs normally.
-- **Port in use:** to use a port other than 3000, run `npm start -- -p <port>`.
+All model calls go through one factory, `agent/src/blueprint/models.py`. API keys stay with the agent and never reach the web app.
 
 ## Layout
 
@@ -70,7 +79,8 @@ AGENT_URL=http://localhost:8000 npm start
 | `agent/` | Python 3.14 service (FastAPI, LangGraph, CopilotKit, python-docx), managed with `uv` |
 | `web/` | Next.js 16 App Router front end with the CopilotKit v2 hooks |
 | `app-assets/` | Runtime prompts the agent ships verbatim: interviewer instructions, course context, design-judge prompts, `to-spec`, `to-tickets` and their MIT licence |
-| `docker-compose.yml` | Postgres, agent and web |
+| `scripts/run_local.py` | Local mode: starts the agent and the web app without Docker |
+| `docker-compose.yml` | Server mode: Postgres, agent and web |
 | `docker-compose.e2e.yml` | Override for the end-to-end test that swaps in a scripted fake model |
 
 ## Develop and test
@@ -78,7 +88,7 @@ AGENT_URL=http://localhost:8000 npm start
 No API key or network access is needed: the tests use scripted fake models.
 
 ```sh
-# Agent: lint, types, tests (the tests start a throwaway postgres:16 container, so Docker must be running)
+# Agent: lint, types, tests
 cd agent
 uv sync
 uv run ruff check . && uv run mypy && uv run pytest
@@ -90,6 +100,13 @@ npx tsc --noEmit && npm test
 npx playwright install chromium
 npm run test:e2e        # builds and starts the full stack, then runs five sessions to zip download
 ```
+
+- **Postgres tests (server mode):** these start a throwaway `postgres:16` container, or use the database in `TEST_DATABASE_URL`. On a machine with neither, they are skipped. The SQLite tests for local mode need nothing.
+- **End-to-end test without Docker:** run it against local mode instead.
+  1. Start the fake model with `python3 web/e2e/fake_model.py 9999`.
+  2. Point both roles' base URL in `.env` at `http://127.0.0.1:9999/v1`.
+  3. Start the app with `python3 scripts/run_local.py --port 3100`.
+  4. Run `E2E_REUSE_STACK=1 npm run test:e2e` in `web/`.
 
 The end-to-end test is in `web/e2e/smoke.spec.ts`:
 - **What it runs:** five concurrent sessions, each from creating the session to downloading the zip.

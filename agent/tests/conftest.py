@@ -38,6 +38,8 @@ def env() -> dict[str, str]:
 
 # --- Postgres for the session API and checkpoint tests ----------------------------------------
 # Uses TEST_DATABASE_URL when set; otherwise starts a throwaway postgres:16 container.
+# Without either (a machine with no Docker), these tests are skipped; test_sqlite.py covers
+# local mode there.
 
 
 @pytest.fixture(scope="session")
@@ -47,7 +49,7 @@ def postgres_admin_url() -> Iterator[str]:
         yield url
         return
     if shutil.which("docker") is None:
-        pytest.fail("set TEST_DATABASE_URL or install docker to run the database tests")
+        pytest.skip("Postgres tests need TEST_DATABASE_URL or Docker")
     container = subprocess.run(
         [
             "docker",

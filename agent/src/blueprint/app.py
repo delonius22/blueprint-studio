@@ -10,6 +10,7 @@ from typing import Any
 
 from ag_ui_langgraph import add_langgraph_fastapi_endpoint
 from fastapi import FastAPI
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 from psycopg_pool import AsyncConnectionPool
@@ -22,7 +23,7 @@ from blueprint.log import log_event
 from blueprint.models import RoleModels, build_models, review_model_distinct
 from blueprint.openapi import TITLE, VERSION
 from blueprint.settings import Settings, load_settings
-from blueprint.store import SessionStore
+from blueprint.store import PostgresSessionStore, SessionStore
 
 
 @dataclass(frozen=True)
@@ -117,11 +118,18 @@ def create_app(
 
 
 async def assemble(runtime: Runtime, pool: AsyncConnectionPool[Any]) -> FastAPI:
-    """The full service: Postgres checkpoints (S4.2), the session API (S3) and /agent (S4.1)."""
+    """The full service over Postgres (server mode): checkpoints (S4.2), sessions (S3), /agent."""
     checkpointer = AsyncPostgresSaver(pool)
     await checkpointer.setup()
-    store = SessionStore(pool)
+    store = PostgresSessionStore(pool)
     await store.setup()
+    return assemble_from(runtime, checkpointer, store)
+
+
+def assemble_from(
+    runtime: Runtime, checkpointer: BaseCheckpointSaver[Any], store: SessionStore
+) -> FastAPI:
+    """The full service over a checkpointer and a session store that are already set up."""
     graph = build_graph(runtime.models, checkpointer, runtime.assets)
     app = create_app(graph, store)
     app.state.graph = graph  # for operators' scripts and tests; the API never needs it
