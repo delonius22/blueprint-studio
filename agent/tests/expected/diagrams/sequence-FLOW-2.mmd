@@ -1,0 +1,6 @@
+sequenceDiagram
+  participant CMP_1 as CMP-1: Browser
+  participant CMP_2 as CMP-2: API
+  participant CMP_9 as CMP-9
+  CMP_1-->>CMP_2: POST "/urls"
+  CMP_2-->>CMP_9: audit

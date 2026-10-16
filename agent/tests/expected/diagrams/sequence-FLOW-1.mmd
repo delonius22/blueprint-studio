@@ -1,0 +1,8 @@
+sequenceDiagram
+  participant CMP_1 as CMP-1: Browser
+  participant CMP_2 as CMP-2: API
+  participant CMP_4 as CMP-4: Hot "codes"
+  participant CMP_3 as CMP-3: Links DB
+  CMP_1->>CMP_2: GET /{code}
+  CMP_2->>CMP_4: lookup#59; miss -> DB #35;1
+  CMP_2->>CMP_3: step 3

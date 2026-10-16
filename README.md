@@ -1,6 +1,6 @@
 # Blueprint Studio
 
-A web app where an AI agent walks you through the five-step system-design framework. A second model then reviews the design for security, efficiency and maintainability gaps. The app drafts a PRD for you to sign off, extends it with `to-spec`, breaks it into tickets with `to-tickets`, and hands back Word documents plus a `context.md` that any agent can follow to create the Jira issues.
+A web app where an AI agent walks you through the five-step system-design framework. A second model then reviews the design for security, efficiency and maintainability gaps. The app drafts a PRD for you to sign off, extends it with `to-spec`, breaks it into tickets with `to-tickets`, and hands back Word documents, Mermaid diagrams of the design (`Diagrams.md`: architecture, data model and one sequence per flow) and a `context.md` that any agent can follow to create the Jira issues.
 
 Built with CopilotKit and LangGraph (Python). It runs on any OpenAI-compatible model endpoint.
 

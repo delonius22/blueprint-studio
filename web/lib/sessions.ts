@@ -84,6 +84,7 @@ export function downloadFileName(kind: string, sessionName: string): string {
     "requirements.docx": "Requirements.docx",
     "user-stories.docx": "UserStories.docx",
     "context.md": "context.md",
+    "diagrams.md": "Diagrams.md",
     "bundle.zip": `${sessionName} - Blueprint.zip`,
   };
   return names[kind] ?? kind;

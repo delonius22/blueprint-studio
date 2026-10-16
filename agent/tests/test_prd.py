@@ -198,7 +198,7 @@ def test_prd_v1_0_docx_has_the_s10_4_sections_in_order() -> None:
     assert headings(data) == [
         "URL shortener — PRD v1.0", "Problem Statement", "Goals", "Users and Stakeholders", "Features",
         "F-1: Short links", "F-2: Link owners", "Functional Requirements", "Non-Functional Requirements",
-        "Scope", "Out of Scope", "Open Gaps and Accepted Risks",
+        "Scope", "Out of Scope", "Open Gaps and Accepted Risks", "Diagrams",
     ]  # fmt: skip
     document = Document(io.BytesIO(data))
     assert "approved 2026-10-14 12:30 UTC" in document.paragraphs[1].text
@@ -256,7 +256,8 @@ async def test_downloads_are_listed_and_served_once_available(
         session = (await http.post("/api/sessions", json={"name": "Ünïcode shortener"})).json()
         listing = (await http.get(f"/api/sessions/{session['id']}/downloads")).json()
         assert [i["kind"] for i in listing] == [
-            "prd-v1.0.docx", "prd-v1.1.docx", "prd-v1.2.docx", "requirements.docx", "user-stories.docx", "context.md", "bundle.zip",
+            "prd-v1.0.docx", "prd-v1.1.docx", "prd-v1.2.docx", "requirements.docx", "user-stories.docx", "context.md",
+            "diagrams.md", "bundle.zip",
         ]  # fmt: skip
         assert not any(i["available"] for i in listing)
         early = await http.get(f"/api/sessions/{session['id']}/downloads/prd-v1.0.docx")

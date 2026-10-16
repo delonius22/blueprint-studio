@@ -35,6 +35,31 @@ TICKETS = [
 ]  # fmt: skip
 
 
+# Steps 2 and 3 of the design, so a complete session has diagrams to draw.
+STEPS_2_AND_3: dict[str, Any] = {
+    "entities": [
+        {"id": "ENT-1", "name": "Link", "fields": [
+            {"name": "code", "type": "char(7)", "key": "pk"},
+            {"name": "target", "type": "text", "key": "none"},
+            {"name": "owner_id", "type": "uuid", "key": "fk", "references": "ENT-2"},
+        ]},
+        {"id": "ENT-2", "name": "Owner", "fields": [{"name": "id", "type": "uuid", "key": "pk"}]},
+    ],
+    "relationships": [{"id": "REL-1", "from_entity": "ENT-2", "to_entity": "ENT-1", "cardinality": "1:N"}],
+    "components": [
+        {"id": "CMP-1", "name": "Browser", "kind": "client", "responsibility": "Follows short links"},
+        {"id": "CMP-2", "name": "Redirect service", "kind": "service", "responsibility": "Resolves codes"},
+        {"id": "CMP-3", "name": "Links", "kind": "database", "responsibility": "Stores links"},
+    ],
+    "flows": [
+        {"id": "FLOW-1", "name": "Follow a short link", "kind": "read", "steps": [
+            {"from_component": "CMP-1", "to_component": "CMP-2", "label": "GET /{code}"},
+            {"from_component": "CMP-2", "to_component": "CMP-3", "label": "look up the code"},
+        ]},
+    ],
+}  # fmt: skip
+
+
 def complete_state(**extra: Any) -> SessionState:
     base = signed_off_state()
     v10 = base.prd_versions[0]
@@ -49,6 +74,7 @@ def complete_state(**extra: Any) -> SessionState:
         base.model_dump()
         | {
             "stage": "complete",
+            "design": base.design.model_dump() | STEPS_2_AND_3,
             "prd_draft": v11.model_dump(),
             "prd_versions": [
                 v10.model_dump(),

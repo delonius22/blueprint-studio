@@ -1,0 +1,11 @@
+flowchart LR
+  %% read flows: solid arrows; write flows: dotted arrows
+  CMP_1(["CMP-1: Browser"])
+  CMP_2["CMP-2: API"]
+  CMP_3[("CMP-3: Links DB")]
+  CMP_4("CMP-4: Hot #quot;codes#quot;")
+  CMP_1 -->|"GET /{code}"| CMP_2
+  CMP_2 -->|"lookup; miss -> DB #1"| CMP_4
+  CMP_2 --> CMP_3
+  CMP_1 -.->|"POST #quot;/urls#quot;"| CMP_2
+  CMP_2 -.->|"audit"| CMP_9

@@ -29,7 +29,9 @@ def test_the_fixed_parts_match_the_worked_example() -> None:
     ours = rendered()
 
     def fixed(text: str) -> tuple[str, str]:
-        return text[: text.index("## 5. Features")], text[text.index("## 9. Report") :]
+        # The diagram appendix sits between the report and the attribution; it is no template.
+        tail = re.sub(r"\n## Appendix: diagrams .*?(?=\n---\n)", "", text, flags=re.DOTALL)
+        return text[: text.index("## 5. Features")], tail[tail.index("## 9. Report") :]
 
     assert fixed(ours) == fixed(example)
     headings = re.findall(r"^## .+$", ours, flags=re.MULTILINE)
@@ -37,6 +39,7 @@ def test_the_fixed_parts_match_the_worked_example() -> None:
         "## 1. Your role", "## 2. Jira project",
         "## 3. Mapping table — edit this table to match your Jira, then follow it exactly",
         "## 4. Rules", "## 5. Features", "## 6. User stories", "## 7. Tickets", "## 8. Open gaps", "## 9. Report",
+        "## Appendix: diagrams (reference only)",
     ]  # fmt: skip
 
 

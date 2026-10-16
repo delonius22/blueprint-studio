@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// T-06: the Mermaid source is a pure function of the components and flows (SPECS S11.3), and
-// the diagram panel renders it and shows the source in a collapsible block.
+// T-06: the Mermaid source is a pure function of the design (SPECS S11.3), and the diagram
+// panels render it and show the source in a collapsible block.
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DiagramPanel } from "../components/canvas/DiagramPanel";
-import { designToMermaid } from "../lib/mermaid";
-import type { Component, Flow } from "../lib/state";
+import { AllDiagrams, ArchitectureDiagram, DataModelDiagram, SequenceDiagrams } from "../components/canvas/Diagrams";
+import { dataModelToMermaid, designToMermaid } from "../lib/mermaid";
+import { type Component, EMPTY_DESIGN, type Flow } from "../lib/state";
 
 afterEach(cleanup);
 
@@ -59,10 +59,10 @@ describe("designToMermaid", () => {
   });
 });
 
-describe("DiagramPanel", () => {
+describe("Diagram panels", () => {
   it("renders the SVG and shows the source in a collapsible block", async () => {
     const renderer = vi.fn(async () => '<svg data-testid="diagram"><text>ok</text></svg>');
-    render(<DiagramPanel design={{ components, flows }} render={renderer} />);
+    render(<ArchitectureDiagram design={{ ...EMPTY_DESIGN, components, flows }} render={renderer} />);
 
     await waitFor(() => expect(screen.getByTestId("diagram")).toBeTruthy());
     expect(renderer).toHaveBeenCalledWith(expect.stringMatching(/^diagram-/), designToMermaid({ components, flows }));
@@ -74,8 +74,38 @@ describe("DiagramPanel", () => {
 
   it("says there is nothing to draw before any component exists", () => {
     const renderer = vi.fn();
-    render(<DiagramPanel design={{ components: [], flows: [] }} render={renderer} />);
+    render(<ArchitectureDiagram design={EMPTY_DESIGN} render={renderer} />);
     expect(screen.getByText(/Nothing to draw yet/)).toBeTruthy();
     expect(renderer).not.toHaveBeenCalled();
+  });
+
+  it("draws the data model once entities exist", async () => {
+    const renderer = vi.fn(async () => "<svg></svg>");
+    const design = {
+      ...EMPTY_DESIGN,
+      entities: [{ id: "ENT-1", name: "Link", fields: [{ name: "code", type: "char(7)", key: "pk" as const }], indexes: [] }],
+    };
+    render(<DataModelDiagram design={EMPTY_DESIGN} render={renderer} />);
+    expect(screen.getByText(/appears once entities are recorded/)).toBeTruthy();
+    cleanup();
+    render(<DataModelDiagram design={design} render={renderer} />);
+    await waitFor(() => expect(renderer).toHaveBeenCalledWith(expect.any(String), dataModelToMermaid(design)));
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("1 entity and 0 relationships");
+  });
+
+  it("draws one sequence diagram per flow", () => {
+    render(<SequenceDiagrams design={{ ...EMPTY_DESIGN, components, flows }} render={vi.fn(async () => "<svg></svg>")} />);
+    expect(screen.getByRole("heading", { name: "Sequence: FLW-1 Resolve (read)" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sequence: FLW-2 Create (write)" })).toBeTruthy();
+  });
+
+  it("shows every diagram at the end, or nothing when nothing was recorded", () => {
+    const renderer = vi.fn(async () => "<svg></svg>");
+    const { container } = render(<AllDiagrams design={EMPTY_DESIGN} render={renderer} />);
+    expect(container.textContent).toBe("");
+    cleanup();
+    render(<AllDiagrams design={{ ...EMPTY_DESIGN, components, flows }} render={renderer} />);
+    const titles = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    expect(titles).toEqual(["Architecture diagram", "Sequence: FLW-1 Resolve (read)", "Sequence: FLW-2 Create (write)"]);
   });
 });

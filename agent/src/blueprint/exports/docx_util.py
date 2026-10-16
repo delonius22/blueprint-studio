@@ -45,6 +45,13 @@ def table(document: DocumentObject, headers: Sequence[str], rows: Sequence[Seque
             cell.text = value
 
 
+def code_block(document: DocumentObject, source: str) -> None:
+    """Source code as one monospace paragraph, its lines kept."""
+    run = document.add_paragraph().add_run(source.rstrip("\n"))
+    run.font.name = "Courier New"
+    run.font.size = Pt(9)
+
+
 def bullets(document: DocumentObject, items: Sequence[str], empty: str = "None.") -> None:
     if not items:
         document.add_paragraph(empty)

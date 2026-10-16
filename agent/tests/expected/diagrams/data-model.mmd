@@ -1,0 +1,14 @@
+erDiagram
+  ENT_1["ENT-1: User"] {
+    uuid id PK
+    varchar(255) email_address
+  }
+  ENT_2["ENT-2: Short #quot;link#quot;"] {
+    char(7) code PK
+    uuid owner_id FK "references ENT-1"
+    bool x2fa
+  }
+  ENT_3["ENT-3: Tag"]
+  ENT_1 ||--o{ ENT_2 : "REL-1"
+  ENT_2 }o--o{ ENT_3 : "REL-2"
+  ENT_1 ||--|| ENT_3 : "REL-3"

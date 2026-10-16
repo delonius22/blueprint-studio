@@ -16,6 +16,7 @@ import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
 import { liveState, type PrdDoc } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
+import { AllDiagrams } from "./canvas/Diagrams";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { TicketView } from "./TicketView";
@@ -207,6 +208,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           ) : state.stage === "complete" ? (
             <>
               <CompletionView sessionId={session.id} sessionName={session.name} />
+              <AllDiagrams design={state.design} />
               <TicketView tickets={state.tickets} stage={state.stage} />
             </>
           ) : ["ticket_breakdown", "ticket_gate"].includes(state.stage) ? (

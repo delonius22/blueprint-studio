@@ -130,6 +130,48 @@ When you have finished, reply with:
 1. A table with columns ID, Issue type, Jira key, Parent key, Links created, with one row per ID in sections 5 to 7.
 2. A list of anything you did not create and why. It should be empty.
 
+## Appendix: diagrams (reference only)
+
+These illustrate the design. They are not items: do not create issues from them.
+
+### Architecture
+
+```mermaid
+flowchart LR
+  %% read flows: solid arrows; write flows: dotted arrows
+  CMP_1(["CMP-1: Browser"])
+  CMP_2["CMP-2: Redirect service"]
+  CMP_3[("CMP-3: Links")]
+  CMP_1 -->|"GET /{code}"| CMP_2
+  CMP_2 -->|"look up the code"| CMP_3
+```
+
+### Data model
+
+```mermaid
+erDiagram
+  ENT_1["ENT-1: Link"] {
+    char(7) code PK
+    text target
+    uuid owner_id FK "references ENT-2"
+  }
+  ENT_2["ENT-2: Owner"] {
+    uuid id PK
+  }
+  ENT_2 ||--o{ ENT_1 : "REL-1"
+```
+
+### Sequence: FLOW-1 Follow a short link (read)
+
+```mermaid
+sequenceDiagram
+  participant CMP_1 as CMP-1: Browser
+  participant CMP_2 as CMP-2: Redirect service
+  participant CMP_3 as CMP-3: Links
+  CMP_1->>CMP_2: GET /{code}
+  CMP_2->>CMP_3: look up the code
+```
+
 ---
 
 *Ticket and spec method: to-tickets / to-spec, mattpocock-skills 1.2.3 (MIT, © 2026 Matt Pocock).*

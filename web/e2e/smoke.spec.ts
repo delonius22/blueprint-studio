@@ -121,15 +121,21 @@ for (let n = 1; n <= 5; n++) {
     // Completion: download everything as one zip.
     const all = page.getByRole("link", { name: "Download all (.zip)" });
     await expect(all).toBeVisible();
+    // The diagrams are drawn in the browser, not just listed as source.
+    await expect(page.getByRole("img", { name: /^Architecture diagram/ }).locator("svg")).toBeVisible();
     if (audit) await scan(page, "completion view", violations);
     const [download] = await Promise.all([page.waitForEvent("download"), all.click()]);
     expect(download.suggestedFilename()).toBe(`Smoke ${tag} - Blueprint.zip`);
     const files = unzipSync(new Uint8Array(readFileSync(await download.path())));
     expect(Object.keys(files)).toEqual([
       "PRD v1.0.docx", "PRD v1.1.docx", "PRD v1.2.docx", "Requirements.docx", "UserStories.docx", "context.md",
+      "Diagrams.md",
     ]); // prettier-ignore
 
     // Independence: this session's documents hold this session's design and no other's.
+    const diagramsMd = strFromU8(files["Diagrams.md"]);
+    expect(diagramsMd).toContain("## Architecture");
+    expect(diagramsMd).toContain("```mermaid\nflowchart LR");
     const context = strFromU8(files["context.md"]);
     expect(context).toContain(`FR-1: Users shorten URLs for ${tag}`);
     expect(context).toContain(`Note: Accepted for ${tag}`);

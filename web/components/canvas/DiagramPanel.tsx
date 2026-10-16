@@ -1,20 +1,24 @@
 "use client";
 
-// The architecture diagram panel (SPECS S11.3): rendered Mermaid plus its source.
-import { useEffect, useId, useMemo, useState } from "react";
-import { designToMermaid } from "../../lib/mermaid";
+// One diagram panel (SPECS S11.3): rendered Mermaid plus its source.
+import { useEffect, useId, useState } from "react";
 import { type MermaidRenderer, renderMermaid } from "../../lib/mermaid-render";
-import type { Design } from "../../lib/state";
 import styles from "./Canvas.module.css";
 
-type Props = { design: Pick<Design, "components" | "flows">; render?: MermaidRenderer };
+type Props = {
+  title: string;
+  source: string;
+  // What the image shows, for screen readers; the source below lists every element.
+  description: string;
+  // Shown instead of the image while there is nothing to draw.
+  empty?: string | null;
+  render?: MermaidRenderer;
+};
 
-export function DiagramPanel({ design, render = renderMermaid }: Props) {
-  const source = useMemo(() => designToMermaid(design), [design]);
+export function DiagramPanel({ title, source, description, empty = null, render = renderMermaid }: Props) {
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const domId = `diagram-${useId().replace(/[^A-Za-z0-9]/g, "")}`;
-  const empty = design.components.length === 0;
 
   useEffect(() => {
     if (empty) return;
@@ -34,19 +38,18 @@ export function DiagramPanel({ design, render = renderMermaid }: Props) {
     };
   }, [domId, empty, render, source]);
 
-  const flows = design.flows.length;
   return (
     <section className={`${styles.panel} ${styles.wide}`} aria-labelledby={`${domId}-title`}>
-      <h3 id={`${domId}-title`}>Architecture diagram</h3>
+      <h3 id={`${domId}-title`}>{title}</h3>
       {empty ? (
-        <p className={styles.empty}>Nothing to draw yet: the diagram appears once components are recorded.</p>
+        <p className={styles.empty}>{empty}</p>
       ) : error ? (
         <p role="alert">{error}</p>
       ) : (
         <div
           className={styles.diagram}
           role="img"
-          aria-label={`Architecture diagram of ${design.components.length} components and ${flows} flows; the Mermaid source below lists every element.`}
+          aria-label={`${description}; the Mermaid source below lists every element.`}
           // Mermaid's strict security level sanitises the SVG it returns.
           dangerouslySetInnerHTML={{ __html: svg ?? "" }}
         />

@@ -2,7 +2,7 @@
 import type { Design, Entity } from "../../lib/state";
 import styles from "./Canvas.module.css";
 import { CapStancePanel } from "./CapStancePanel";
-import { DiagramPanel } from "./DiagramPanel";
+import { ArchitectureDiagram, DataModelDiagram, SequenceDiagrams } from "./Diagrams";
 import { Panel } from "./Panel";
 
 function num(value: number): string {
@@ -144,6 +144,7 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
+          <DataModelDiagram design={design} />
         </div>
       </div>
       <div className={styles.group}>
@@ -209,7 +210,8 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
-          <DiagramPanel design={design} />
+          <ArchitectureDiagram design={design} />
+          <SequenceDiagrams design={design} />
         </div>
       </div>
       <div className={styles.group}>

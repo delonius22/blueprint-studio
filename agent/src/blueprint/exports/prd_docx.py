@@ -1,7 +1,15 @@
 """PRD v1.x.docx (SPECS S10.4): the frozen PRD version, section by section."""
 
-from blueprint.domain import PrdVersion, ProposedChange
-from blueprint.exports.docx_util import bullets, new_document, parse_time, table, to_bytes
+from blueprint.diagrams import all_diagrams
+from blueprint.domain import Design, PrdVersion, ProposedChange
+from blueprint.exports.docx_util import (
+    bullets,
+    code_block,
+    new_document,
+    parse_time,
+    table,
+    to_bytes,
+)
 from blueprint.state import SessionState
 
 ATTRIBUTION = (
@@ -19,11 +27,19 @@ def render_prd(state: SessionState, session_name: str, version: str) -> bytes:
     if found is None:
         raise LookupError(f"PRD v{version} has not been approved")
     return _render(
-        found, session_name, [c for c in state.proposed_changes if c.decision == "approved"]
+        found,
+        session_name,
+        [c for c in state.proposed_changes if c.decision == "approved"],
+        state.design,
     )
 
 
-def _render(entry: PrdVersion, session_name: str, approved_changes: list[ProposedChange]) -> bytes:
+def _render(
+    entry: PrdVersion,
+    session_name: str,
+    approved_changes: list[ProposedChange],
+    design: Design,
+) -> bytes:
     doc = entry.doc
     approved = parse_time(entry.approved_at)
     document = new_document(f"{session_name} — PRD v{entry.version}")
@@ -83,6 +99,18 @@ def _render(entry: PrdVersion, session_name: str, approved_changes: list[Propose
             for g in doc.open_gaps
         ],
     )
+    document.add_heading("Diagrams", level=1)
+    diagrams = all_diagrams(design)
+    if not diagrams:
+        document.add_paragraph("None: no entities or components were recorded.")
+    else:
+        document.add_paragraph(
+            "Mermaid source. Diagrams.md in the downloads has them ready to render; any Mermaid "
+            "renderer, such as mermaid.live, also draws a pasted diagram."
+        )
+    for title, source in diagrams:
+        document.add_heading(title, level=2)
+        code_block(document, source)
 
     if entry.version != "1.0":
         document.add_heading("Solution", level=1)

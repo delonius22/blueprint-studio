@@ -5,6 +5,7 @@ user stories, tickets and open gaps of the current PRD and breakdown, and the
 required report; it ends with the to-tickets / to-spec attribution line.
 """
 
+from blueprint.diagrams import markdown
 from blueprint.domain import Feature, PrdDoc, Ticket, UserStory
 from blueprint.state import SessionState
 
@@ -49,17 +50,20 @@ If either line is blank when you start, ask the user for it before doing anythin
 """
 
 
-FOOTER = f"""## 9. Report
+REPORT = """## 9. Report
 
 When you have finished, reply with:
 
 1. A table with columns ID, Issue type, Jira key, Parent key, Links created, with one row per ID in sections 5 to 7.
 2. A list of anything you did not create and why. It should be empty.
-
+"""
+CLOSING = f"""
 ---
 
 {ATTRIBUTION}
 """
+# The template's own footer, before the diagram appendix existed.
+FOOTER = REPORT + CLOSING
 
 
 def _capitalised(text: str) -> str:
@@ -156,4 +160,13 @@ def render_context(state: SessionState, session_name: str) -> bytes:
     for ticket in tickets:
         lines += _ticket(ticket, stories)
     lines += ["## 8. Open gaps", "", *_gaps(doc)]
-    return ("\n".join(lines) + "\n" + FOOTER).encode("utf-8")
+    return ("\n".join(lines) + "\n" + REPORT + _appendix(state) + CLOSING).encode("utf-8")
+
+
+def _appendix(state: SessionState) -> str:
+    """The design's diagrams after the report: context for the reader, never issues."""
+    diagrams = markdown(state.design, heading_level=3)
+    if not diagrams:
+        return ""
+    intro = "These illustrate the design. They are not items: do not create issues from them."
+    return "\n".join(["", "## Appendix: diagrams (reference only)", "", intro, "", *diagrams])

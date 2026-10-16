@@ -53,6 +53,7 @@ def test_the_bundle_holds_every_available_kind_except_itself_under_its_file_name
                 "Requirements.docx",
                 "UserStories.docx",
                 "context.md",
+                "Diagrams.md",
             ],
         ),
         (
@@ -64,6 +65,7 @@ def test_the_bundle_holds_every_available_kind_except_itself_under_its_file_name
                 "Requirements.docx",
                 "UserStories.docx",
                 "context.md",
+                "Diagrams.md",
             ],
         ),
     ):
