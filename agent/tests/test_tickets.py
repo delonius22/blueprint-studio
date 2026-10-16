@@ -1,6 +1,5 @@
-"""T-15: tickets with to-tickets and the review loop (S2.14, S9.1-S9.4, G3)."""
+"""T-15: tickets with to-tickets, completing the session (S2.14, S9.1-S9.4, G3)."""
 
-import json
 from typing import Any
 
 import pytest
@@ -57,12 +56,6 @@ def planning(*script: Any) -> GraphSeam:
     )
 
 
-async def gate(seam: GraphSeam) -> AIMessage:
-    message = (await seam.state())["messages"][-1]
-    assert isinstance(message, AIMessage) and message.tool_calls[0]["name"] == "review_tickets"
-    return message
-
-
 async def test_the_planner_runs_to_tickets_verbatim_and_never_sees_an_open_gap() -> None:
     seam = planning(GOOD)
     await seam.resync()
@@ -76,19 +69,25 @@ async def test_the_planner_runs_to_tickets_verbatim_and_never_sees_an_open_gap()
     assert "Analytics may come later" in human.text and "US-3" in human.text
 
 
-async def test_valid_tickets_are_renumbered_in_build_order_and_offered_for_review() -> None:
+async def test_valid_tickets_are_renumbered_in_build_order_and_complete_the_session() -> None:
     seam = planning(GOOD)
     await seam.resync()
 
     state = await seam.state()
-    assert state["stage"] == "ticket_gate"
     assert [(t["id"], t["title"], t["blocked_by"]) for t in state["tickets"]] == [
         ("T-01", "Ticket a", []),
         ("T-02", "Ticket b", ["T-01"]),
         ("T-03", "Ticket c", ["T-01"]),
     ]
-    message = await gate(seam)
-    assert [t["id"] for t in message.tool_calls[0]["args"]["tickets"]] == ["T-01", "T-02", "T-03"]
+    assert state["stage"] == "complete"
+    assert state["tickets_approved_at"] is not None and state["tickets_approved_at"].endswith("Z")
+    assert not any(isinstance(m, AIMessage) and m.tool_calls for m in state["messages"])
+    summary, done = state["messages"][-2:]
+    assert "T-01" in summary.text and "T-03" in summary.text
+    assert (
+        "PRD v1.0.docx, PRD v1.1.docx, Requirements.docx, UserStories.docx and context.md"
+        in done.text
+    )
 
 
 async def test_stories_must_be_covered_with_one_corrective_retry() -> None:
@@ -102,7 +101,7 @@ async def test_stories_must_be_covered_with_one_corrective_retry() -> None:
         "US-2 is delivered by no ticket" in retry.text
         and "US-3 is delivered by no ticket" in retry.text
     )
-    assert (await seam.state())["stage"] == "ticket_gate"
+    assert (await seam.state())["stage"] == "complete"
 
 
 async def test_a_cycle_is_named_and_sent_back_to_the_planner() -> None:
@@ -119,7 +118,7 @@ async def test_a_cycle_is_named_and_sent_back_to_the_planner() -> None:
     second = seam.interview.calls[1].messages[1]
     assert isinstance(second, HumanMessage)
     assert "the blocking edges contain a cycle: a → c → b → a" in second.text
-    assert (await seam.state())["stage"] == "ticket_gate"  # never shown as valid until fixed
+    assert (await seam.state())["stage"] == "complete"  # completes only once the cycle is fixed
 
 
 async def test_a_planner_that_keeps_producing_cycles_stops_with_an_error() -> None:
@@ -132,40 +131,6 @@ async def test_a_planner_that_keeps_producing_cycles_stops_with_an_error() -> No
         and "cycle" in state["last_error"]["message"]
     )
     assert state["tickets"] == [] and state["stage"] == "ticket_breakdown"
-
-
-async def test_revise_replans_with_the_instructions_and_approve_completes() -> None:
-    merged = {
-        "tickets": [
-            ticket("ab", ["US-1", "US-2"], title="Shorten and redirect"),
-            ticket("c", ["US-3"], ["ab"]),
-        ]
-    }
-    seam = planning(GOOD, merged)
-    await seam.resync()
-    first = await gate(seam)
-
-    await seam.answer(
-        str(first.tool_calls[0]["id"]),
-        json.dumps({"decision": "revise", "instructions": "Merge T-01 and T-02"}),
-    )
-    revision = seam.interview.calls[1].messages[1].text
-    assert (
-        "Merge T-01 and T-02" in revision and '"id": "T-02"' in revision
-    )  # current tickets and instructions
-    state = await seam.state()
-    assert [t["title"] for t in state["tickets"]] == ["Shorten and redirect", "Ticket c"]
-    assert state["tickets_approved_at"] is None
-
-    second = await gate(seam)
-    await seam.answer(str(second.tool_calls[0]["id"]), '{"decision": "approve"}')
-    state = await seam.state()
-    assert state["stage"] == "complete"
-    assert state["tickets_approved_at"] is not None and state["tickets_approved_at"].endswith("Z")
-    assert (
-        "PRD v1.0.docx, PRD v1.1.docx, Requirements.docx, UserStories.docx and context.md"
-        in state["messages"][-1].text
-    )
 
 
 def test_the_dag_validator_rules() -> None:

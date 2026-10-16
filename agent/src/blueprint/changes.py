@@ -135,17 +135,3 @@ def apply_changes(
             else:
                 result.features = [f for f in result.features if f.id != target]
     return result
-
-
-def change_decisions(answer: object) -> dict[str, str]:
-    """review_changes answers a decision per change ID (S8.5): approved or rejected."""
-    items = answer.get("decisions") if isinstance(answer, dict) else answer
-    decisions: dict[str, str] = {}
-    for item in items if isinstance(items, list) else []:
-        if isinstance(item, dict) and isinstance(item.get("change_id"), str):
-            value = str(item.get("decision", "")).lower()
-            if value in ("approve", "approved"):
-                decisions[item["change_id"]] = "approved"
-            elif value in ("reject", "rejected"):
-                decisions[item["change_id"]] = "rejected"
-    return decisions

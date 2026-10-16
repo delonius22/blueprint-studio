@@ -14,15 +14,12 @@ import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
-import { liveState, type PrdDoc, type Ticket } from "../lib/state";
+import { liveState, type PrdDoc } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
-import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
-import { ReviewTicketsCard } from "./gates/ReviewTicketsCard";
 import { TicketView } from "./TicketView";
 import { CompletionView } from "./CompletionView";
-import { type CardChange, ReviewChangesCard } from "./gates/ReviewChangesCard";
 import { SignOffCard } from "./gates/SignOffCard";
 import { DownloadsMenu } from "./DownloadsMenu";
 import { PrdViewer } from "./PrdViewer";
@@ -53,7 +50,8 @@ function useThreadHistory(sessionId: string) {
   }, [copilotkit, agent, sessionId]);
 }
 
-// Approval gates are frontend tools rendered as cards (PRD D5, SPECS S11.4).
+// Approval gates are frontend tools rendered as cards (PRD D5, SPECS S11.4). Since the build only
+// the step confirmations, the gap decisions and the PRD sign-off stop for the user.
 function useGates() {
   useHumanInTheLoop<ConfirmStepArgs>({
     name: "confirm_step",
@@ -105,47 +103,6 @@ function useGates() {
     render: ({ args, status, respond, result }) => (
       <SignOffCard
         args={args as Partial<{ prd: PrdDoc }>}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (answer) => void respond(answer) : undefined}
-        result={result}
-      />
-    ),
-  });
-  useHumanInTheLoop<{ seams: CardSeam[] }>({
-    name: "approve_seams",
-    description: "The app asks the user to approve or edit the proposed test seams. Never call this yourself.",
-    parameters: z.object({
-      seams: z.array(z.object({ id: z.string().optional(), name: z.string(), description: z.string(), covers: z.array(z.string()) })),
-    }),
-    render: ({ args, status, respond, result }) => (
-      <ApproveSeamsCard
-        args={args}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (answer) => void respond(answer) : undefined}
-        result={result}
-      />
-    ),
-  });
-  useHumanInTheLoop<{ changes: CardChange[] }>({
-    name: "review_changes",
-    description: "The app asks the user to approve or reject each proposed change to the signed-off PRD. Never call this yourself.",
-    parameters: z.object({ changes: z.array(z.any()) }),
-    render: ({ args, status, respond, result }) => (
-      <ReviewChangesCard
-        args={args as Partial<{ changes: CardChange[] }>}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (decisions) => void respond(decisions) : undefined}
-        result={result}
-      />
-    ),
-  });
-  useHumanInTheLoop<{ tickets: Ticket[] }>({
-    name: "review_tickets",
-    description: "The app asks the user to approve or revise the ticket breakdown. Never call this yourself.",
-    parameters: z.object({ tickets: z.array(z.any()) }),
-    render: ({ args, status, respond, result }) => (
-      <ReviewTicketsCard
-        args={args as Partial<{ tickets: Ticket[] }>}
         status={String(status) as "inProgress" | "executing" | "complete"}
         respond={respond ? (answer) => void respond(answer) : undefined}
         result={result}

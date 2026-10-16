@@ -7,7 +7,6 @@ instead of a tracker (PRD D8), and leave the seam check to its own step.
 
 import json
 from collections.abc import Sequence
-from typing import Any
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import Field, ValidationError
@@ -216,25 +215,6 @@ def seam_problems(seams: Sequence[SeamDraft], draft: PrdDoc) -> list[str]:
 
 def issue_seams(drafts: Sequence[SeamDraft], counters: dict[str, int]) -> list[Seam]:
     return [Seam(id=issue_id(counters, "SEAM"), **d.model_dump()) for d in drafts]
-
-
-def approved_seams(answer: Any, proposed: Sequence[Seam], counters: dict[str, int]) -> list[Seam]:
-    """The seams the user approved, possibly edited (S8.3): known IDs kept, new ones issued."""
-    known = {s.id for s in proposed}
-    seams: list[Seam] = []
-    for raw in answer if isinstance(answer, list) else []:
-        if not isinstance(raw, dict) or not str(raw.get("name", "")).strip():
-            continue
-        seam_id = raw.get("id") if raw.get("id") in known else issue_id(counters, "SEAM")
-        seams.append(
-            Seam(
-                id=str(seam_id),
-                name=str(raw["name"]).strip(),
-                description=str(raw.get("description", "")).strip(),
-                covers=[str(c) for c in raw.get("covers") or []],
-            )
-        )
-    return seams
 
 
 def seam_decision(seam: Seam) -> str:

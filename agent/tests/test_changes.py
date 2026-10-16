@@ -1,4 +1,4 @@
-"""T-14: proposed changes and PRD v1.2 (S2.12, S2.13, S8.5, S8.6, S10.4); Q-11 reading (a)."""
+"""T-14: proposed changes, applied as PRD v1.2 (S2.12, S2.13, S8.5, S8.6, S10.4); Q-11 reading (a)."""
 
 import io
 import json
@@ -50,68 +50,29 @@ CHANGES = [
 ]  # fmt: skip
 
 
-async def reviewing(changes: list[dict[str, Any]]) -> tuple[GraphSeam, str]:
-    seam = GraphSeam(ScriptedChatModel.with_script(), initial=v11_state(changes))
+async def test_every_proposed_change_is_applied_as_v1_2_without_a_review_card() -> None:
+    initial = v11_state(CHANGES)
+    seam = GraphSeam(ScriptedChatModel.with_script(), initial=initial)
     await seam.resync()
-    gate = (await seam.state())["messages"][-1]
-    assert isinstance(gate, AIMessage) and gate.tool_calls[0]["name"] == "review_changes"
-    return seam, str(gate.tool_calls[0]["id"])
-
-
-async def test_review_changes_lists_every_pending_change() -> None:
-    seam, _ = await reviewing(CHANGES)
-    gate = (await seam.state())["messages"][-1]
-    assert [c["id"] for c in gate.tool_calls[0]["args"]["changes"]] == ["CHG-1", "CHG-2", "CHG-3"]
-    await seam.resync()  # a page load does not open the card twice
-    assert (
-        sum(
-            bool(isinstance(m, AIMessage) and m.tool_calls)
-            for m in (await seam.state())["messages"]
-        )
-        == 1
-    )
-
-
-async def test_approved_changes_produce_v1_2_and_rejected_ones_are_dropped() -> None:
-    seam, card = await reviewing(CHANGES)
-    before = json.dumps((await seam.state())["prd_versions"])
-
-    decisions = [{"change_id": "CHG-1", "decision": "approved"}, {"change_id": "CHG-2", "decision": "approved"},
-                 {"change_id": "CHG-3", "decision": "rejected", "reason": "Keep it"}]  # fmt: skip
-    await seam.answer(card, json.dumps(decisions))
 
     state = await seam.state()
     assert state["stage"] == "ticket_breakdown"
     v10, v11, v12 = state["prd_versions"]
-    assert json.dumps([v10, v11]) == json.dumps(json.loads(before))  # earlier versions unchanged
+    assert json.dumps([v10, v11]) == json.dumps(
+        initial["prd_versions"]
+    )  # earlier versions unchanged
     assert v12["version"] == "1.2"
     doc = PrdDoc.model_validate(v12["doc"])
     assert doc.goals == ["Short links that always redirect", "Links expire after a year"]
     assert [r.statement for r in doc.functional_requirements if r.id == "FR-2"] == [
         "Visitors are redirected with HTTP 301"
     ]
-    assert doc.scope == ["Creating and resolving short links"]  # the rejected removal was dropped
+    assert doc.scope == []
     assert doc.solution == "A web service" and doc.testing_decisions == ["SEAM-1: HTTP API."]
-    assert [c["decision"] for c in state["proposed_changes"]] == [
-        "approved",
-        "approved",
-        "rejected",
-    ]
+    assert [c["decision"] for c in state["proposed_changes"]] == ["approved"] * 3
+    assert not any(isinstance(m, AIMessage) and m.tool_calls for m in state["messages"])
     # S8.6: every later stage and download reads the newest version
     assert current_prd(state["prd_versions"]) == doc
-
-
-async def test_no_v1_2_when_every_change_is_rejected() -> None:
-    seam, card = await reviewing(CHANGES[:1])
-    await seam.answer(
-        card, json.dumps([{"change_id": "CHG-1", "decision": "rejected", "reason": "No"}])
-    )
-    state = await seam.state()
-    assert [v["version"] for v in state["prd_versions"]] == ["1.0", "1.1"]
-    assert state["stage"] == "ticket_breakdown"
-    assert current_prd(state["prd_versions"]) == PrdDoc.model_validate(
-        state["prd_versions"][1]["doc"]
-    )
 
 
 def test_adding_and_removing_requirements_issues_ids_and_keeps_features_whole() -> None:
@@ -216,12 +177,9 @@ async def test_the_ticket_planner_reads_v1_2_as_the_current_prd() -> None:
     tickets = {"tickets": [ticket("a", ["US-1"]), ticket("b", ["US-2", "US-3"], ["a"])]}
     seam = GraphSeam(ScriptedChatModel.with_script(tickets), initial=initial)
     await seam.resync()
-    card = (await seam.state())["messages"][-1].tool_calls[0]["id"]
-
-    await seam.answer(str(card), json.dumps([{"change_id": "CHG-1", "decision": "approved"}]))
 
     state = await seam.state()
     assert [v["version"] for v in state["prd_versions"]] == ["1.0", "1.1", "1.2"]
     planner_input = seam.interview.calls[0].messages[1].text
     assert "Links expire after a year" in planner_input  # only v1.2 has this goal
-    assert state["stage"] == "ticket_gate"
+    assert state["stage"] == "complete"

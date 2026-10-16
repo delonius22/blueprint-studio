@@ -16,7 +16,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from blueprint.assets import Assets
-from blueprint.changes import apply_changes, change_decisions
+from blueprint.changes import apply_changes
 from blueprint.design import (
     Draft,
     ToolFailure,
@@ -34,18 +34,14 @@ from blueprint.domain import (
     PrdVersion,
     ProposedChange,
     Scorecard,
-    Seam,
     Ticket,
 )
 from blueprint.edits import edit_note
 from blueprint.gates import (
-    APPROVE_SEAMS,
     CONFIRM_STEP,
     DECIDE_GAPS,
     GATES,
     OPEN_GATE_EVENT,
-    REVIEW_CHANGES,
-    REVIEW_TICKETS,
     SIGN_OFF_PRD,
     close_unanswered,
     gap_decisions,
@@ -82,7 +78,6 @@ from blueprint.scoring import ScorecardError, make_scorecard
 from blueprint.spec import (
     SeamsOut,
     SpecOut,
-    approved_seams,
     build_v1_1_draft,
     issue_seams,
     seam_decision,
@@ -207,12 +202,6 @@ def route_start(state: DesignState) -> str | list[str]:
             return "critic"
         if name == SIGN_OFF_PRD:
             return "prd_drafter"  # S7.3, S7.4
-        if name == APPROVE_SEAMS:
-            return "seam_proposer"  # S8.3, S8.4
-        if name == REVIEW_TICKETS:
-            return "completer" if content.get("decision") == "approve" else "ticket_planner"  # S9.4
-        if name == REVIEW_CHANGES:
-            return "change_applier"  # S8.5
         return "interviewer"
     if pending_gate(messages):
         return END  # a card is waiting: a run that adds nothing never opens it again
@@ -223,12 +212,15 @@ def route_start(state: DesignState) -> str | list[str]:
         return "spec_synthesizer"
     if pending_gate(messages):
         return END  # a card is waiting: a run that adds nothing never opens it again
-    if stage == "seam_gate" and not state.get("seams"):
+    # After the PRD sign-off everything runs by itself; a retry resumes where it failed.
+    if stage == "seam_gate":
         return "seam_proposer"
     if stage == "change_review":
         return "change_applier"
     if stage == "ticket_breakdown":
         return "ticket_planner"
+    if stage == "ticket_gate":
+        return "completer"
     if isinstance(_last(state), HumanMessage):
         return "interviewer"
     return END
@@ -262,7 +254,7 @@ def route_prd_drafter(state: DesignState) -> str:
 
 
 def route_seam_proposer(state: DesignState) -> str:
-    """Approved seams go to the change review when synthesis proposed changes, otherwise
+    """Once PRD v1.1 is frozen: the proposed changes when synthesis made any, otherwise
     straight to the tickets (S8.4)."""
     if state.get("last_error"):
         return END
@@ -274,7 +266,7 @@ def route_seam_proposer(state: DesignState) -> str:
 
 
 def route_change_applier(state: DesignState) -> str:
-    """Once every change is decided, the tickets are planned from the current PRD (S8.5, S8.6)."""
+    """Once the changes are applied, the tickets are planned from the current PRD (S8.5, S8.6)."""
     if not state.get("last_error") and state.get("stage") == "ticket_breakdown":
         return "ticket_planner"
     return END
@@ -285,11 +277,12 @@ def route_ticket_planner(state: DesignState) -> str:
 
 
 def route_dag_validator(state: PlanningChannel) -> str:
-    """S9.3: invalid edges go back to the planner with the error (a bounded number of times)."""
+    """S9.3: invalid edges go back to the planner with the error (a bounded number of times);
+    a valid breakdown completes the session."""
     planning = state.get("planning") or {}
-    if not state.get("last_error") and planning.get("error"):
-        return "ticket_planner"
-    return END
+    if state.get("last_error"):
+        return END
+    return "ticket_planner" if planning.get("error") else "completer"
 
 
 def route_spec_synthesizer(state: DesignState) -> str:
@@ -753,39 +746,12 @@ def build_graph(
         }
 
     async def seam_proposer(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
-        """S8.3, S8.4: propose the test seams, and act on the user's approval or feedback."""
+        """S8.3, S8.4: propose the test seams and freeze PRD v1.1 with them. Since the build
+        this needs no approval: only the step confirmations and the PRD sign-off stop."""
         draft = PrdDoc.model_validate(state["prd_draft"])
-        proposed = [Seam.model_validate(s) for s in state.get("seams") or []]
         counters = dict(state["id_counters"])
-        answer = last_answer(list(state["messages"]))
-        feedback = None
-        if answer is not None and answer[0] == APPROVE_SEAMS and state["stage"] == "seam_gate":
-            if step_approved(answer[1]):
-                seams = approved_seams(answer[1].get("seams"), proposed, counters) or proposed
-                final = draft.model_copy(
-                    update={"testing_decisions": [seam_decision(s) for s in seams]}
-                )
-                version = PrdVersion(version="1.1", approved_at=utc_now(), doc=final)
-                changes = state.get("proposed_changes") or []
-                return {
-                    "seams": [s.model_dump(mode="json") for s in seams],
-                    "prd_draft": final.model_dump(mode="json"),
-                    "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
-                    "id_counters": counters,
-                    "stage": "change_review" if changes else "ticket_breakdown",
-                    "last_error": None,
-                    "messages": [
-                        AIMessage(
-                            "The seams are approved and PRD v1.1 is frozen. You can download it now."
-                        )
-                    ],
-                }
-            feedback = (
-                str(answer[1].get("feedback") or "").strip()
-                or "The user asked for different seams."
-            )
         meter = Meter.for_node(state, "seam_proposer")
-        prompt = seam_messages(assets, draft, feedback, proposed)
+        prompt = seam_messages(assets, draft, None, [])
         try:
             out, problems = await structured_with_retry(
                 meter, SeamsOut, prompt, lambda o: seam_problems(o.seams, draft), config
@@ -800,18 +766,24 @@ def build_graph(
             )
             return {"last_error": error.info(), "tokens_used": meter.used}
         seams = issue_seams(out.seams, counters)
-        text = f"I propose {len(seams)} test seam{'s' if len(seams) != 1 else ''}. Approve them, edit them, or tell me what to change."
-        message, call = gate_message(
-            APPROVE_SEAMS, {"seams": [s.model_dump(mode="json") for s in seams]}, text
-        )
-        await open_gate(config, message, call)
+        final = draft.model_copy(update={"testing_decisions": [seam_decision(s) for s in seams]})
+        version = PrdVersion(version="1.1", approved_at=utc_now(), doc=final)
+        changes = state.get("proposed_changes") or []
+        names = ", ".join(s.name for s in seams)
         return {
             "seams": [s.model_dump(mode="json") for s in seams],
+            "prd_draft": final.model_dump(mode="json"),
+            "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
             "id_counters": counters,
-            "stage": "seam_gate",
+            "stage": "change_review" if changes else "ticket_breakdown",
             "tokens_used": meter.used,
             "last_error": None,
-            "messages": [message],
+            "messages": [
+                AIMessage(
+                    f"PRD v1.1 is frozen with {len(seams)} test seam{'s' if len(seams) != 1 else ''}"
+                    f" ({names}). You can download it now."
+                )
+            ],
         }
 
     async def ticket_planner(state: PlanningChannel, config: RunnableConfig) -> dict[str, Any]:
@@ -819,13 +791,6 @@ def build_graph(
         prd = current_prd(state["prd_versions"])
         assert prd is not None
         planning = dict(state.get("planning") or {})
-        answer = last_answer(list(state["messages"]))
-        instructions = None
-        if answer is not None and answer[0] == REVIEW_TICKETS:
-            instructions = (
-                str(answer[1].get("instructions") or "").strip() or "Revise the breakdown."
-            )
-            planning = {}
         attempts = int(planning.get("attempts", 0)) + 1
         if attempts > DAG_ATTEMPTS:
             error = ModelCallFailed(
@@ -836,9 +801,7 @@ def build_graph(
             return {"last_error": error.info(), "planning": {}}
         current = [Ticket.model_validate(t) for t in state.get("tickets") or []]
         previous = [TicketDraft.model_validate(t) for t in planning.get("drafts") or []]
-        prompt = planner_messages(
-            assets, prd, current, instructions, planning.get("error"), previous
-        )
+        prompt = planner_messages(assets, prd, current, None, planning.get("error"), previous)
         meter = Meter.for_node(state, "ticket_planner")
         try:
             out, problems = await structured_with_retry(
@@ -865,29 +828,24 @@ def build_graph(
         }
 
     async def dag_validator(state: PlanningChannel, config: RunnableConfig) -> dict[str, Any]:
-        """S9.3: check the blocking edges, renumber in build order, and ask for review."""
+        """S9.3: check the blocking edges and renumber in build order; a valid breakdown goes
+        straight to the completer (no review since the build)."""
         planning = dict(state.get("planning") or {})
         drafts = [TicketDraft.model_validate(t) for t in planning.get("drafts") or []]
         try:
             tickets = validate_dag(drafts)
         except DagError as invalid:
             return {"planning": planning | {"error": str(invalid)}}
-        message, call = gate_message(
-            REVIEW_TICKETS,
-            {"tickets": [t.model_dump(mode="json") for t in tickets]},
-            tickets_summary(tickets),
-        )
-        await open_gate(config, message, call)
         return {
             "tickets": [t.model_dump(mode="json") for t in tickets],
             "id_counters": dict(state["id_counters"]) | {"T": len(tickets)},
             "stage": "ticket_gate",
             "planning": {},
-            "messages": [message],
+            "messages": [AIMessage(tickets_summary(tickets))],
         }
 
     async def completer(state: DesignState) -> dict[str, Any]:
-        """S9.4: approval completes the session; one message lists the downloads."""
+        """S9.4: the ticket breakdown completes the session; one message lists the downloads."""
         versions = ", ".join(f"PRD v{v['version']}.docx" for v in state["prd_versions"])
         return {
             "tickets_approved_at": utc_now(),
@@ -895,7 +853,7 @@ def build_graph(
             "last_error": None,
             "messages": [
                 AIMessage(
-                    "The ticket breakdown is approved and the session is complete. Your downloads are "
+                    "The ticket breakdown is done and the session is complete. Your downloads are "
                     f"ready: {versions}, Requirements.docx, UserStories.docx and context.md (the Jira "
                     "hand-off), or all of them as one zip from the completion view."
                 )
@@ -903,22 +861,11 @@ def build_graph(
         }
 
     async def change_applier(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
-        """S8.5: ask about each proposed change; apply the approved ones as PRD v1.2."""
+        """S8.5: apply the changes synthesis proposed to signed-off content as PRD v1.2. Since
+        the build every pending change is accepted: the PRD sign-off was the user's decision."""
         changes = [ProposedChange.model_validate(c) for c in state.get("proposed_changes") or []]
-        answer = last_answer(list(state["messages"]))
-        if answer is None or answer[0] != REVIEW_CHANGES:
-            pending = [c for c in changes if c.decision == "pending"]
-            text = f"Synthesis proposed {len(pending)} change{'s' if len(pending) != 1 else ''} to signed-off content. Approve or reject each one."
-            message, call = gate_message(
-                REVIEW_CHANGES, {"changes": [c.model_dump(mode="json") for c in pending]}, text
-            )
-            await open_gate(config, message, call)
-            return {"messages": [message], "last_error": None}
-        decisions = change_decisions(answer[1].get("decisions"))
         decided = [
-            c.model_copy(update={"decision": decisions.get(c.id, "rejected")})
-            if c.decision == "pending"
-            else c
+            c.model_copy(update={"decision": "approved"}) if c.decision == "pending" else c
             for c in changes
         ]
         approved = [c for c in decided if c.decision == "approved"]
@@ -942,7 +889,7 @@ def build_graph(
             "prd_versions": [*state["prd_versions"], version.model_dump(mode="json")],
             "messages": [
                 AIMessage(
-                    f"PRD v1.2 is frozen with {len(approved)} approved change{'s' if len(approved) != 1 else ''}. You can download it now."
+                    f"PRD v1.2 is frozen with the {len(approved)} change{'s' if len(approved) != 1 else ''} synthesis proposed. You can download it now."
                 )
             ],
         }
@@ -989,7 +936,9 @@ def build_graph(
     )
     builder.add_conditional_edges("change_applier", route_change_applier, ["ticket_planner", END])
     builder.add_conditional_edges("ticket_planner", route_ticket_planner, ["dag_validator", END])
-    builder.add_conditional_edges("dag_validator", route_dag_validator, ["ticket_planner", END])
+    builder.add_conditional_edges(
+        "dag_validator", route_dag_validator, ["ticket_planner", "completer", END]
+    )
     builder.add_edge("completer", END)
     builder.add_conditional_edges(
         "interviewer", route_interviewer, ["design_tools", "prd_drafter", END]

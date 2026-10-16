@@ -1,10 +1,7 @@
 // @vitest-environment jsdom
-// T-15: the ticket view shows the breakdown with blocking edges (SPECS S11.2); review_tickets
-// approves or asks for a revision in plain words (S9.4).
+// T-15: the ticket view shows the breakdown with blocking edges (SPECS S11.2).
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
-import { ReviewTicketsCard } from "../components/gates/ReviewTicketsCard";
+import { afterEach, expect, it } from "vitest";
 import { TicketView } from "../components/TicketView";
 import { buildWaves, type Ticket } from "../lib/state";
 
@@ -26,19 +23,4 @@ it("shows every ticket with its blocking edges, stories, criteria and waves", ()
 
 it("computes build waves from the blocking edges", () => {
   expect(buildWaves(tickets).map((w) => w.map((t) => t.id))).toEqual([["T-01"], ["T-02", "T-03"]]);
-});
-
-it("approves, or requires instructions to revise", async () => {
-  const respond = vi.fn();
-  render(<ReviewTicketsCard args={{ tickets }} status="executing" respond={respond} />);
-  await userEvent.click(screen.getByRole("button", { name: "Ask for a revision" }));
-  const send = screen.getByRole("button", { name: "Send revision" }) as HTMLButtonElement;
-  expect(send.disabled).toBe(true);
-  await userEvent.type(screen.getByLabelText(/What should change/), "Merge T-02 and T-03");
-  await userEvent.click(send);
-  expect(respond).toHaveBeenLastCalledWith({ decision: "revise", instructions: "Merge T-02 and T-03" });
-  cleanup();
-  render(<ReviewTicketsCard args={{ tickets }} status="executing" respond={respond} />);
-  await userEvent.click(screen.getByRole("button", { name: "Approve the tickets" }));
-  expect(respond).toHaveBeenLastCalledWith({ decision: "approve" });
 });

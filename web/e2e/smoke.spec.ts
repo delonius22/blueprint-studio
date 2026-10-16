@@ -111,23 +111,12 @@ for (let n = 1; n <= 5; n++) {
     await gapCard.getByLabel("Note for GAP-1 (optional)").fill(`Accepted for ${tag}`);
     await gapCard.getByRole("button", { name: "Submit decisions" }).click();
 
-    // PRD v1.0 sign-off, seams (v1.1), proposed changes (v1.2), tickets.
+    // PRD v1.0 sign-off is the last approval: seams (v1.1), proposed changes (v1.2) and the
+    // tickets follow by themselves.
     const signOff = page.getByRole("button", { name: "Sign off v1.0" });
     await expect(signOff).toBeVisible();
     if (audit) await scan(page, "gate card: sign_off_prd + PRD viewer", violations);
     await signOff.click();
-    const seams = page.getByRole("button", { name: "Approve seams" });
-    await expect(seams).toBeVisible();
-    if (audit) await scan(page, "gate card: approve_seams", violations);
-    await seams.click();
-    const changes = page.getByRole("button", { name: "Accept all changes" });
-    await expect(changes).toBeVisible();
-    if (audit) await scan(page, "gate card: review_changes", violations);
-    await changes.click();
-    const tickets = page.getByRole("button", { name: "Approve the tickets" });
-    await expect(tickets).toBeVisible();
-    if (audit) await scan(page, "gate card: review_tickets + ticket view", violations);
-    await tickets.click();
 
     // Completion: download everything as one zip.
     const all = page.getByRole("link", { name: "Download all (.zip)" });

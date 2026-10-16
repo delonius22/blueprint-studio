@@ -173,7 +173,13 @@ def validate_dag(drafts: Sequence[TicketDraft]) -> list[Ticket]:
 
 
 def tickets_summary(tickets: Sequence[Ticket]) -> str:
+    """The breakdown as a chat message: one line per ticket, in build order."""
+    lines = [
+        f"- {t.id}: {t.title}"
+        + (f" (blocked by {', '.join(t.blocked_by)})" if t.blocked_by else "")
+        for t in tickets
+    ]
     return (
         f"Here is the breakdown: {len(tickets)} ticket{'s' if len(tickets) != 1 else ''}, numbered "
-        "in build order. Approve it, or tell me in plain words what to merge, split or re-edge."
+        "in build order.\n\n" + "\n".join(lines)
     )

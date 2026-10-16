@@ -1,4 +1,4 @@
-"""T-13: PRD v1.1 with to-spec, and seam approval (S2.11, S8.1-S8.4, S10.4, S12.3)."""
+"""T-13: PRD v1.1 with to-spec, frozen with the seams it proposes (S2.11, S8.1-S8.4, S10.4, S12.3)."""
 
 import io
 import json
@@ -87,7 +87,8 @@ async def test_the_synthesizer_runs_to_spec_verbatim_without_touching_signed_off
         "Analytics may come later",
         "GAP-1: Open creation Decision needed: Who? Note: v1",
     ]
-    assert state["stage"] == "seam_gate"
+    assert [v["version"] for v in state["prd_versions"]] == ["1.0", "1.1"]
+    assert state["stage"] == "ticket_breakdown"  # no approval: the tickets are next
 
 
 async def test_stories_and_changes_are_validated_with_one_retry() -> None:
@@ -102,7 +103,7 @@ async def test_stories_and_changes_are_validated_with_one_retry() -> None:
     for problem in ("story 1 names feature F-9, which does not exist", "story 2 names FR-7, which is not an FR or NFR",
                     "FR-2 is covered by no user story", "proposed change 1 names solution, which is not a signed-off section"):  # fmt: skip
         assert problem in retry.text
-    assert (await seam.state())["stage"] == "seam_gate"
+    assert (await seam.state())["stage"] == "ticket_breakdown"
 
     failing = synthesizing(bad, bad)
     await failing.send("go")
@@ -111,53 +112,27 @@ async def test_stories_and_changes_are_validated_with_one_retry() -> None:
     assert state["prd_draft"] == state["prd_versions"][0]["doc"]  # nothing half-written
 
 
-async def test_seams_are_proposed_and_an_edited_approval_freezes_v1_1() -> None:
+async def test_the_proposed_seams_freeze_v1_1_without_an_approval_card() -> None:
     seam = synthesizing(SPEC, SEAMS)
     await seam.send("go")
-    state = await seam.state()
-    gate = state["messages"][-1]
-    assert isinstance(gate, AIMessage) and gate.tool_calls[0]["name"] == "approve_seams"
-    assert [s["id"] for s in gate.tool_calls[0]["args"]["seams"]] == ["SEAM-1"]
-
-    await seam.resync()  # a page load while the card waits does not propose again
-    assert len(seam.interview.calls) == 2
-
-    edited = [{"id": "SEAM-1", "name": "Public HTTP API", "description": "End to end over HTTP", "covers": ["US-1", "US-2", "US-3"]},
-              {"name": "Redirect path", "description": "Redirects only", "covers": ["US-2"]}]  # fmt: skip
-    await seam.answer(
-        str(gate.tool_calls[0]["id"]), json.dumps({"approved": True, "seams": edited})
-    )
 
     state = await seam.state()
-    assert state["stage"] == "ticket_breakdown"  # no proposed changes
+    assert state["stage"] == "ticket_breakdown"  # no proposed changes: on to the tickets
     v10, v11 = state["prd_versions"]
     assert v11["version"] == "1.1"
     assert v11["doc"]["testing_decisions"] == [
-        "SEAM-1: Public HTTP API. End to end over HTTP Covers US-1, US-2, US-3.",
-        "SEAM-2: Redirect path. Redirects only Covers US-2.",
+        "SEAM-1: HTTP API. Drive the public API end to end Covers US-1, US-2, US-3."
     ]
     for section in SIGNED_OFF_SECTIONS:
         assert json.dumps(v11["doc"][section]) == json.dumps(v10["doc"][section])
-    assert [s["id"] for s in state["seams"]] == ["SEAM-1", "SEAM-2"]
-
-
-async def test_rejected_seams_are_proposed_again_with_the_feedback() -> None:
-    again = {"seams": [{"name": "Graph", "description": "The agent graph", "covers": ["US-1"]}]}
-    seam = synthesizing(SPEC, SEAMS, again)
-    await seam.send("go")
-    gate = (await seam.state())["messages"][-1]
-    await seam.answer(
-        str(gate.tool_calls[0]["id"]),
-        json.dumps({"approved": False, "feedback": "Test at the graph instead"}),
+    assert [s["id"] for s in state["seams"]] == ["SEAM-1"]
+    assert not any(isinstance(m, AIMessage) and m.tool_calls for m in state["messages"])
+    assert any(
+        "PRD v1.1 is frozen with 1 test seam (HTTP API)" in m.text for m in state["messages"]
     )
 
-    assert "Test at the graph instead" in seam.interview.calls[2].messages[1].text
-    state = await seam.state()
-    assert state["stage"] == "seam_gate" and [s["id"] for s in state["seams"]] == ["SEAM-2"]
-    assert len(state["prd_versions"]) == 1
 
-
-async def test_proposed_changes_send_v1_1_to_change_review() -> None:
+async def test_proposed_changes_are_applied_after_v1_1_as_v1_2() -> None:
     change = {
         "section": "goals",
         "kind": "add",
@@ -168,13 +143,11 @@ async def test_proposed_changes_send_v1_1_to_change_review() -> None:
     await seam.send("go")
     state = await seam.state()
     assert [(c["id"], c["section"], c["decision"]) for c in state["proposed_changes"]] == [
-        ("CHG-1", "goals", "pending")
+        ("CHG-1", "goals", "approved")
     ]
-    await seam.answer(
-        str(state["messages"][-1].tool_calls[0]["id"]), '{"approved": true, "seams": []}'
-    )
-    state = await seam.state()
-    assert state["stage"] == "change_review" and state["prd_versions"][-1]["version"] == "1.1"
+    assert [v["version"] for v in state["prd_versions"]] == ["1.0", "1.1", "1.2"]
+    assert "Links expire" in state["prd_versions"][-1]["doc"]["goals"]
+    assert state["stage"] == "ticket_breakdown"
 
 
 def test_prd_v1_1_docx_adds_the_spec_sections_and_ends_with_the_attribution() -> None:
