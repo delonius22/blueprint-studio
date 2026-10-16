@@ -9,3 +9,4 @@ web/playwright-report/
 web/AGENTS.md
 # Local CodeGraph index
 .codegraph/
+.ua/
