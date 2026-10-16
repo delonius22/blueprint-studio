@@ -10,9 +10,6 @@ server is needed. Both processes listen on 127.0.0.1 only, so nothing is reachab
 another machine, whatever HOST says in .env. Ctrl+C stops both processes. Standard library
 only, Python 3.9 or later.
 """
-
-from __future__ import annotations
-
 import argparse
 import os
 import shutil
