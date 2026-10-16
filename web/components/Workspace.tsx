@@ -215,6 +215,12 @@ function NoAddMenu() {
   return null;
 }
 
+const OPENING_PLACEHOLDER = "What would you like to build?";
+const ANSWER_PLACEHOLDER = "Type your answer...";
+const WELCOME =
+  "Tell me what you'd like to build, in as much or as little detail as you have. " +
+  "I'll turn it into requirements and walk you through the five design steps with questions.";
+
 function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
   useGates();
@@ -275,9 +281,17 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           <CopilotChat
             agentId={AGENT_NAME}
             threadId={session.id}
-            // S11.7: the send button gets an accessible name; the attachments menu has nothing to
-            // offer in this app (no attachments, no tools menu), so it is not rendered.
+            // A new session opens on one question; the user's answer is the brief the
+            // interviewer records first, and from then on the interviewer leads.
+            labels={{
+              chatInputPlaceholder: agent.messages.length === 0 ? OPENING_PLACEHOLDER : ANSWER_PLACEHOLDER,
+              welcomeMessageText: WELCOME,
+            }}
+            // S11.7: the send and scroll-to-bottom buttons get accessible names; the attachments
+            // menu has nothing to offer in this app (no attachments, no tools menu), so it is
+            // not rendered.
             input={{ sendButton: { "aria-label": "Send message" }, addMenuButton: NoAddMenu }}
+            scrollView={{ scrollToBottomButton: { "aria-label": "Scroll to the latest message" } }}
           />
         </aside>
       </div>

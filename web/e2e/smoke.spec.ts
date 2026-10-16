@@ -20,10 +20,13 @@ async function scan(page: Page, scope: string, found: Violations): Promise<void>
   await page.emulateMedia({ colorScheme: "light" });
 }
 
+// The chat input asks "What would you like to build?" until the first message, then for answers.
+const CHAT_INPUT = /^(What would you like to build\?|Type your answer\.\.\.)$/;
+
 async function send(page: Page, text: string): Promise<void> {
   // The chat ignores Enter while a run is still in progress (for example the re-sync run on
   // page load), so keep pressing until the message has gone.
-  const input = page.getByPlaceholder("Type a message...");
+  const input = page.getByPlaceholder(CHAT_INPUT);
   await expect(input).toBeEditable();
   await input.fill(text);
   await expect(async () => {
@@ -38,7 +41,7 @@ async function confirmStep(page: Page, step: number, keyboard = false): Promise<
   await expect(approve).toBeVisible();
   if (keyboard) {
     // Reach the button with Tab alone, then press it with Enter.
-    await page.getByPlaceholder("Type a message...").focus();
+    await page.getByPlaceholder(CHAT_INPUT).focus();
     for (let i = 0; i < 60 && !(await approve.evaluate((el) => el === document.activeElement)); i++) {
       await page.keyboard.press("Shift+Tab");
     }
@@ -73,9 +76,11 @@ for (let n = 1; n <= 5; n++) {
     await page.waitForURL(/\/s\//);
     const sessionId = page.url().split("/s/")[1];
 
-    // Step 1: requirements, recorded live on the canvas.
+    // Step 1: the chat opens on one question; the answer is recorded live on the canvas.
+    await expect(page.getByPlaceholder("What would you like to build?")).toBeVisible();
     await send(page, `FR: Users shorten URLs for ${tag}\nFR: Visitors are redirected for ${tag}`);
     await expect(page.getByRole("region", { name: /^Functional requirements/ }).getByText("FR-2")).toBeVisible();
+    await expect(page.getByPlaceholder("Type your answer...")).toBeVisible();
     if (audit) await scan(page, "workspace: canvas (interview)", violations);
     await send(page, "CONFIRM 1");
     await expect(page.getByRole("group", { name: /Confirm Step 1/ })).toBeVisible();

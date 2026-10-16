@@ -232,3 +232,20 @@ def test_validation_names_every_violation() -> None:
         "SPOF-1 refers to CMP-3, which is not a component",
     ]
     assert violations(Design(), {}) == []
+
+
+async def test_an_empty_design_tells_the_interviewer_to_record_the_brief_first() -> None:
+    interview = ScriptedChatModel.with_script(
+        calls(("upsert_requirement", {"statement": "Users shorten a long URL"})),
+        AIMessage("How many links a day?"),
+        AIMessage("And the read latency?"),
+    )
+    seam = GraphSeam(interview)
+    await seam.send("A URL shortener where users shorten long URLs")
+    await seam.send("About a million a day")
+
+    opening = "## Opening"
+    first, after_recording, next_turn = (c.messages[0].text for c in interview.calls)
+    assert opening in first and "record every functional requirement" in first
+    assert opening not in after_recording  # FR-1 is recorded: the brief has been taken in
+    assert opening not in next_turn

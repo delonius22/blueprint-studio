@@ -158,6 +158,19 @@ def design_summary(design: Design) -> str:
     return "\n\n".join(lines) if lines else "(nothing recorded yet)"
 
 
+# A new session opens on "What would you like to build?": the first message is the user's brief.
+OPENING = (
+    "## Opening\n"
+    'Nothing is recorded yet: the user\'s message answers "What would you like to build?", in '
+    "as much or as little detail as they have. Before you ask anything, record every functional "
+    "requirement, non-functional target and out-of-scope boundary it already states, with your "
+    "tools, so the user never has to repeat it. Then ask only about what Step 1 still needs, a "
+    "few questions at a time. If the message says little more than the kind of system, start "
+    "Step 1 from the beginning and ask everything it needs. The user only answers your questions: "
+    "lead every turn."
+)
+
+
 def interviewer_prompt(
     assets: Assets,
     stage: str,
@@ -179,6 +192,8 @@ def interviewer_prompt(
         "technique as something to consider, never as the answer.",
         "## Design record\n" + design_summary(design),
     ]
+    if stage == "interview" and not any(design.model_dump().values()):
+        parts.append(OPENING)
     if edit_note:
         parts.append("## Edits made by the user\n" + edit_note)
     if gap_answers:
