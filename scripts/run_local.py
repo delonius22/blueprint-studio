@@ -6,7 +6,9 @@
 
 Settings come from .env at the repository root (copy .env.example). With the default
 DATABASE_URL=sqlite:///blueprint.db, sessions are kept in agent/blueprint.db; no database
-server is needed. Ctrl+C stops both processes. Standard library only, Python 3.9 or later.
+server is needed. Both processes listen on 127.0.0.1 only, so nothing is reachable from
+another machine, whatever HOST says in .env. Ctrl+C stops both processes. Standard library
+only, Python 3.9 or later.
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env"
+# Local mode serves this machine only: both servers bind to loopback, never to every interface.
+LOOPBACK = "127.0.0.1"
 
 
 def fail(message: str) -> NoReturn:
@@ -126,8 +130,11 @@ def main() -> None:
             "run_local: starting the agent (uv installs Python and packages on first run)",
             flush=True,
         )
+        # A variable already in the environment wins over --env-file, so HOST is loopback here.
         agent = start(
-            [uv, "run", "--env-file", str(ENV_FILE), "python", "-m", "blueprint"], ROOT / "agent"
+            [uv, "run", "--env-file", str(ENV_FILE), "python", "-m", "blueprint"],
+            ROOT / "agent",
+            dict(os.environ, HOST=LOOPBACK),
         )
         processes.append(agent)
         wait_for_agent(agent, f"{agent_url}/agent/health", timeout_s=600)
@@ -135,8 +142,10 @@ def main() -> None:
         next_bin = str(web / "node_modules" / "next" / "dist" / "bin" / "next")
         mode = "start" if args.prod else "dev"
         web_env = dict(os.environ, AGENT_URL=agent_url, NEXT_TELEMETRY_DISABLED="1")
-        processes.append(start([node, next_bin, mode, "-p", str(args.port)], web, web_env))
-        print(f"run_local: Blueprint Studio is starting at http://localhost:{args.port} "
+        processes.append(
+            start([node, next_bin, mode, "-H", LOOPBACK, "-p", str(args.port)], web, web_env)
+        )
+        print(f"run_local: Blueprint Studio is starting at http://{LOOPBACK}:{args.port} "
               "(Ctrl+C stops it)", flush=True)  # fmt: skip
 
         while all(p.poll() is None for p in processes):

@@ -18,7 +18,7 @@ cp .env.example .env    # fill in both model roles (see below)
 | Start | `python3 scripts/run_local.py` | `docker compose up --build` |
 | Needs | [uv](https://docs.astral.sh/uv/), Node.js 24 and any Python 3 | Docker with Compose |
 | Database | A SQLite file, `agent/blueprint.db`: nothing to install | Postgres, in its own container |
-| Opens at | <http://localhost:3000> | <http://localhost:3000> |
+| Opens at | <http://127.0.0.1:3000>, this machine only | <http://localhost:3000> |
 
 ### Local mode
 
@@ -32,7 +32,7 @@ The launcher:
 - waits for the agent's startup model check;
 - starts the web app.
 
-Ctrl+C stops everything.
+Both servers listen on `127.0.0.1` only, so neither is reachable from another machine, even if `.env` sets `HOST=0.0.0.0`. Ctrl+C stops everything.
 
 | Option | What it does |
 |---|---|
@@ -46,7 +46,7 @@ To use a local Postgres instead of SQLite, set `DATABASE_URL=postgresql://<user>
 
 To run the two processes yourself instead of using the launcher:
 - **Agent:** in `agent/`, run `uv run --env-file ../.env python -m blueprint`.
-- **Web app:** in `web/`, run `npm ci`, then `npm run build`, then `AGENT_URL=http://127.0.0.1:8000 npm start`. On Windows PowerShell, set the address first with `$env:AGENT_URL="http://127.0.0.1:8000"`.
+- **Web app:** in `web/`, run `npm ci`, then `npm run build`, then `AGENT_URL=http://127.0.0.1:8000 npm start -- -H 127.0.0.1`. Without `-H`, Next.js listens on every network interface. On Windows PowerShell, set the address first with `$env:AGENT_URL="http://127.0.0.1:8000"`.
 
 `npm start` warns that it "does not work with output: standalone". The app runs normally anyway; the setting is there for the server image.
 
