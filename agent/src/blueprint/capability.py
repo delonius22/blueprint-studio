@@ -7,12 +7,19 @@ back once to tool calling (S13.4).
 
 import asyncio
 
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
 from blueprint.errors import StartupError
-from blueprint.models import ROLES, RoleModels
+from blueprint.models import (
+    ROLES,
+    STRUCTURED_METHODS,
+    ChatModel,
+    RoleModels,
+    complete,
+    structured_request,
+    structured_value,
+)
 from blueprint.settings import Role, RoleConfig, Settings
 
 
@@ -50,38 +57,40 @@ def _failure(exc: Exception, timeout_s: float) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
-async def _check_tool_calling(model: BaseChatModel, timeout_s: float) -> str | None:
+async def _check_tool_calling(model: ChatModel, timeout_s: float) -> str | None:
     try:
         async with asyncio.timeout(timeout_s):
-            response = await model.bind_tools([Ping]).ainvoke([HumanMessage(TOOL_PROMPT)])
+            response = await complete(model, [HumanMessage(TOOL_PROMPT)], [Ping])
     except Exception as exc:
         return _failure(exc, timeout_s)
-    calls = getattr(response, "tool_calls", None) or []
-    if not any(call["name"] == "Ping" for call in calls):
+    if not any(call["name"] == "Ping" for call in response.tool_calls):
         return "the model answered without calling the tool"
     return None
 
 
-async def _check_structured_output(model: BaseChatModel, timeout_s: float) -> str | None:
+async def _check_structured_output(model: ChatModel, timeout_s: float) -> str | None:
     reasons: list[str] = []
-    for method in ("json_schema", "function_calling"):
+    for method in STRUCTURED_METHODS:
         try:
             async with asyncio.timeout(timeout_s):
-                result = await model.with_structured_output(PingResult, method=method).ainvoke(
-                    [HumanMessage(STRUCTURED_PROMPT)]
+                response = await complete(
+                    model,
+                    [HumanMessage(STRUCTURED_PROMPT)],
+                    **structured_request(PingResult, method),
                 )
         except Exception as exc:
             reasons.append(f"{method}: {_failure(exc, timeout_s)}")
             continue
-        if isinstance(result, PingResult):
-            return None
-        reasons.append(f"{method}: returned {type(result).__name__}, not the schema")
+        try:
+            structured_value(PingResult, response, method)
+        except ValueError:
+            reasons.append(f"{method}: the answer did not match the schema")
+            continue
+        return None
     return "; ".join(reasons)
 
 
-async def _check_role(
-    role: Role, model: BaseChatModel, config: RoleConfig, timeout_s: float
-) -> None:
+async def _check_role(role: Role, model: ChatModel, config: RoleConfig, timeout_s: float) -> None:
     reason = await _check_tool_calling(model, timeout_s)
     if reason is not None:
         raise _refusal(role, "tool-calling", config, reason)

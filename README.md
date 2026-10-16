@@ -72,13 +72,13 @@ The app uses two model roles, each configured by a base URL, an API key and a mo
 - **Use two different models:** if both roles point at the same model, the review still runs, but the app warns that the cross-model check is off.
 - **Other settings:** `.env.example` documents the rest.
 
-All model calls go through one factory, `agent/src/blueprint/models.py`. API keys stay with the agent and never reach the web app.
+All model calls go through OpenAI's Python SDK (`openai.AsyncOpenAI`, Chat Completions), and `agent/src/blueprint/models.py` is the only module that uses it. API keys stay with the agent and never reach the web app.
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `agent/` | Python 3.14 service (FastAPI, LangGraph, CopilotKit, python-docx), managed with `uv` |
+| `agent/` | Python 3.14 service (FastAPI, LangGraph, CopilotKit, the OpenAI SDK, python-docx), managed with `uv` |
 | `web/` | Next.js 16 App Router front end with the CopilotKit v2 hooks |
 | `app-assets/` | Runtime prompts the agent ships verbatim: interviewer instructions, course context, design-judge prompts, `to-spec`, `to-tickets` and their MIT licence |
 | `scripts/run_local.py` | Local mode: starts the agent and the web app without Docker |

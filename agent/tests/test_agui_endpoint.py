@@ -24,6 +24,7 @@ from service import post_run, run_input
 from blueprint.app import create_app
 from blueprint.assets import load_assets
 from blueprint.graph import build_graph
+from blueprint.llm import Meter, ModelGateway
 from blueprint.models import RoleModels
 from blueprint.state import DesignState, new_session_state
 
@@ -63,11 +64,13 @@ async def test_chat_reply_streams_through_the_agent_endpoint() -> None:
 
 def gate_graph(model: ScriptedChatModel, seen: list[list[str]]) -> Any:
     """A hand-built StateGraph whose node binds the frontend tools found in state."""
+    gateway = ModelGateway(RoleModels(model, model))
 
     async def node(state: DesignState, config: RunnableConfig) -> dict[str, Any]:
         frontend_tools = state["copilotkit"]["actions"]
         seen.append([t["name"] for t in frontend_tools])
-        reply = await model.bind_tools(frontend_tools).ainvoke(state["messages"], config)
+        meter = Meter("t-gate", "node", {}, 10**9)
+        reply = await gateway.chat(meter, "interview", state["messages"], config, frontend_tools)
         return {"messages": [reply]}
 
     def route(state: DesignState) -> str:

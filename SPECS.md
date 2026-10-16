@@ -14,6 +14,7 @@
 - **S1.4** The agent refuses to start, naming the variable, if `MODEL_PROVIDER`, `MODEL_NAME`, `REVIEW_MODEL_PROVIDER`, `REVIEW_MODEL_NAME` or `DATABASE_URL` is missing, if a provider value is unsupported, or if a numeric or boolean variable cannot be parsed. [NFR-10]
 - **S1.5** Provider keys are read only by `agent`. The `web` build references no variable that holds a key. Settings objects never print key values. [NFR-6]
 - **S1.6** One factory builds every chat model through LangChain's `init_chat_model`, for one of two roles: `interview` (from the `MODEL_*` variables) or `review` (from the `REVIEW_MODEL_*` variables). No other module imports a provider SDK or a provider-specific chat-model class. [NFR-10, D9]
+  > **Since the build:** models are now reached through OpenAI's own SDK (`openai.AsyncOpenAI`, Chat Completions) instead of LangChain's `init_chat_model`. The rule stands: one module, `models.py`, builds the clients and is the only one that imports the SDK. See MODEL-CONNECTION.md.
 - **S1.7** At startup the agent checks each role's model with one trivial tool call and one trivial structured-output call. If either fails, it refuses to start and names the role, the capability, the provider and the model. `SKIP_MODEL_CHECK=true` skips the check for offline tests. [NFR-10, US-52]
 - **S1.8** The review model is *distinct* when its (provider, model name, base URL) triple differs from the interview model's. The result is computed once at startup and copied into each new session as `review_model_distinct`. [FR-14]
 

@@ -1,11 +1,10 @@
-"""T-01: every chat model comes from the one two-role factory (S1.6, MODEL-CONNECTION.md)."""
+"""T-01: every model client comes from the one two-role factory (S1.6, MODEL-CONNECTION.md)."""
 
 import ast
 from pathlib import Path
 
+import openai
 from conftest import INTERVIEW_KEY, REVIEW_KEY
-from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
 
 import blueprint
 from blueprint.models import build_models
@@ -26,19 +25,13 @@ def _imports(path: Path) -> set[str]:
     return names
 
 
-def test_no_module_imports_a_provider_sdk() -> None:
-    for path in SOURCE.rglob("*.py"):
-        offending = {n for n in _imports(path) if n.split(".")[0] in PROVIDER_MODULES}
-        assert not offending, f"{path.name} imports {offending}"
-
-
-def test_only_the_factory_builds_chat_models() -> None:
-    builders = {
+def test_only_the_factory_imports_a_provider_sdk() -> None:
+    importers = {
         path.name
         for path in SOURCE.rglob("*.py")
-        if any("init_chat_model" in n or "chat_models" in n for n in _imports(path))
+        if any(n.split(".")[0] in PROVIDER_MODULES for n in _imports(path))
     }
-    assert builders == {"models.py"}
+    assert importers == {"models.py"}
 
 
 def test_factory_builds_both_roles_from_their_own_variables(env: dict[str, str]) -> None:
@@ -49,8 +42,7 @@ def test_factory_builds_both_roles_from_their_own_variables(env: dict[str, str])
     }
     for role, (url, name, key) in expected.items():
         model = models.for_role(role)  # type: ignore[arg-type]
-        assert isinstance(model, ChatOpenAI)
-        assert (model.openai_api_base, model.model_name) == (url, name)
-        assert isinstance(model.openai_api_key, SecretStr)
-        assert model.openai_api_key.get_secret_value() == key
-        assert (model.max_retries, model.request_timeout) == (0, 120.0)  # S13.1 governs retries
+        assert isinstance(model.client, openai.AsyncOpenAI)
+        assert (str(model.client.base_url).rstrip("/"), model.model) == (url, name)
+        assert model.client.api_key == key
+        assert (model.client.max_retries, model.client.timeout) == (0, 120.0)  # S13.1 retries

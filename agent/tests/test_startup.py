@@ -6,12 +6,11 @@ import subprocess
 import sys
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
 
+import httpx2
 import pytest
 from conftest import APP_ASSETS, INTERVIEW_KEY, REVIEW_KEY, valid_env
 from fakes import ScriptedChatModel, tool_call
-from langchain_core.outputs import ChatResult
 
 from blueprint.app import prepare
 from blueprint.assets import ASSET_FILES, AssetError
@@ -188,7 +187,7 @@ async def test_failed_check_names_role_capability_base_url_and_model(
 
 
 class HangingModel(ScriptedChatModel):
-    async def _agenerate(self, *args: Any, **kwargs: Any) -> ChatResult:
+    async def _handle(self, request: httpx2.Request) -> httpx2.Response:
         await asyncio.sleep(30)
         raise AssertionError("unreachable")
 

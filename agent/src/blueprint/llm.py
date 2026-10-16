@@ -8,9 +8,12 @@
   carries no usage, it is estimated as (prompt + completion characters) / 4.
 - Structured output (S13.4): JSON-schema mode first; if the provider rejects it,
   tool calling once; the working mode is remembered per model for the process.
+- Callbacks: each call is reported to LangGraph's callbacks the way a LangChain chat
+  model reports itself, so the AG-UI bridge streams the reply to the browser and
+  LangSmith traces the call.
 
 Provider errors are recognised by their shape (``status_code``, ``response``,
-timeout class names) so that no module but the factory touches a provider SDK.
+timeout class names) so that only ``blueprint.models`` imports the OpenAI SDK.
 """
 
 import asyncio
@@ -25,18 +28,28 @@ from email.utils import parsedate_to_datetime
 from functools import partial
 from typing import Any
 
-from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, message_chunk_to_message
+from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, LLMResult
 from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import get_async_callback_manager_for_config
 from pydantic import BaseModel
 
 from blueprint.domain import ErrorInfo
 from blueprint.log import log_event
-from blueprint.models import RoleModels
+from blueprint.models import (
+    STRUCTURED_METHODS,
+    ChatModel,
+    RoleModels,
+    complete,
+    stream,
+    structured_request,
+    structured_value,
+)
 from blueprint.settings import Role
 
 MAX_RETRIES = 3
 BASE_DELAY_S = 1.0
-STRUCTURED_METHODS = ("json_schema", "function_calling")
 
 
 class ModelCallFailed(Exception):
@@ -120,6 +133,29 @@ def _completion_chars(message: AIMessage) -> int:
     return len(message.text) + sum(
         len(json.dumps(c["args"])) + len(c["name"]) for c in message.tool_calls
     )
+
+
+async def reported(
+    config: RunnableConfig | None,
+    model: ChatModel,
+    messages: Sequence[BaseMessage],
+    call: Callable[[AsyncCallbackManagerForLLMRun], Awaitable[AIMessage]],
+) -> AIMessage:
+    """Run one model call inside a chat-model run on ``config``'s callbacks."""
+    manager = get_async_callback_manager_for_config(config or {})
+    (run,) = await manager.on_chat_model_start(
+        {"name": "openai"},
+        [list(messages)],
+        name="openai",
+        invocation_params={"model": model.model},
+    )
+    try:
+        reply = await call(run)
+    except BaseException as exc:
+        await run.on_llm_error(exc)
+        raise
+    await run.on_llm_end(LLMResult(generations=[[ChatGeneration(message=reply)]]))
+    return reply
 
 
 @dataclass
@@ -235,25 +271,23 @@ class ModelGateway:
         tools: Sequence[Any] = (),
         measure_ttft: bool = False,
     ) -> AIMessage:
+        """A streamed chat reply; its text reaches the browser as it arrives."""
         model = self.models.for_role(role)
-        runnable: Any = model.bind_tools(list(tools)) if tools else model
         first: list[float] = []
 
-        async def streamed() -> AIMessage:
-            """Stream the reply (so time to first token is measured) and assemble it."""
+        async def streamed(run: AsyncCallbackManagerForLLMRun) -> AIMessage:
             first.clear()
-            total: AIMessageChunk | None = None
-            async for chunk in runnable.astream(list(messages), config):
+
+            async def forward(chunk: AIMessageChunk) -> None:
                 if not first:
                     first.append(time.monotonic())
-                total = chunk if total is None else total + chunk
-            assert total is not None
-            message = message_chunk_to_message(total)
-            assert isinstance(message, AIMessage)
-            return message
+                await run.on_llm_new_token(chunk.text, chunk=ChatGenerationChunk(message=chunk))
 
-        call = streamed if measure_ttft else partial(runnable.ainvoke, list(messages), config)
-        reply, start, attempt = await self._attempts(meter, role, call)
+            return await stream(model, messages, tools, forward, f"lc_run--{run.run_id}")
+
+        reply, start, attempt = await self._attempts(
+            meter, role, partial(reported, config, model, messages, streamed)
+        )
         assert isinstance(reply, AIMessage)
         now = time.monotonic()
         ttft = round((first[0] - start) * 1000) if measure_ttft and first else None
@@ -280,10 +314,16 @@ class ModelGateway:
         cached = self._modes.get(id(model))
         methods = (cached,) if cached else STRUCTURED_METHODS
         for index, method in enumerate(methods):
-            runnable: Any = model.with_structured_output(schema, method=method, include_raw=True)
+            request = structured_request(schema, method)
+
+            async def ask(
+                run: AsyncCallbackManagerForLLMRun, request: dict[str, Any] = request
+            ) -> AIMessage:
+                return await complete(model, messages, **request)
+
             try:
-                out, start, attempt = await self._attempts(
-                    meter, role, partial(runnable.ainvoke, list(messages), config)
+                raw, start, attempt = await self._attempts(
+                    meter, role, partial(reported, config, model, messages, ask)
                 )
             except ModelCallFailed as failure:
                 rejected = failure.code == "model_error" and failure.status in (400, 404, 422, None)
@@ -291,23 +331,18 @@ class ModelGateway:
                     continue  # S13.4: the provider rejected JSON-schema mode; try tool calling once
                 raise
             self._modes[id(model)] = method
-            raw = out.get("raw") if isinstance(out, dict) else None
             self._account(
                 meter,
                 role,
-                raw if isinstance(raw, AIMessage) else None,
+                raw,
                 _chars(messages),
                 round((time.monotonic() - start) * 1000),
                 attempt,
             )
-            if (
-                not isinstance(out, dict)
-                or out.get("parsing_error") is not None
-                or out.get("parsed") is None
-            ):
-                problem = out.get("parsing_error") if isinstance(out, dict) else out
+            try:
+                return structured_value(schema, raw, method)
+            except ValueError as problem:
                 raise InvalidStructuredOutput(
                     f"the {role} model's answer did not match the schema: {problem}"
-                )
-            return schema.model_validate(out["parsed"])
+                ) from problem
         raise AssertionError("unreachable")
