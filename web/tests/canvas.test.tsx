@@ -44,6 +44,20 @@ describe("Canvas", () => {
     render(<Canvas design={EMPTY_DESIGN} />);
     expect(screen.getAllByText("Nothing recorded yet.")).toHaveLength(17);
   });
+
+  it("is read-only: the interviewer records items, the user only answers in the chat", () => {
+    render(
+      <Canvas
+        design={{
+          ...EMPTY_DESIGN,
+          functional_requirements: [{ id: "FR-1", statement: "Users shorten a long URL" }],
+          cap_stance: { choice: "AP", rationale: "Redirects must stay available" },
+        }}
+      />,
+    );
+    expect(screen.queryAllByRole("button")).toEqual([]);
+    expect(screen.queryAllByRole("textbox")).toEqual([]);
+  });
 });
 
 describe("Canvas Step 2 panels", () => {

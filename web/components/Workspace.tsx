@@ -14,9 +14,8 @@ import { z } from "zod";
 import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
-import { liveState, type PrdDoc, type SessionState, type Ticket } from "../lib/state";
+import { liveState, type PrdDoc, type Ticket } from "../lib/state";
 import { Canvas } from "./canvas/Canvas";
-import { CanvasEditContext, type CanvasEditor } from "./canvas/CanvasEdit";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
 import { type CardGap, DecideGapsCard } from "./gates/DecideGapsCard";
 import { ApproveSeamsCard, type CardSeam } from "./gates/ApproveSeamsCard";
@@ -195,22 +194,6 @@ function useLastError(error: ErrorInfo | null) {
   return { visible, retry, dismiss: () => setDismissed(error), retrying };
 }
 
-// S11.3: canvas edits are written with agent.setState and saved (and validated, S2.15) by a
-// run that adds no message; the interviewer acknowledges them on its next turn (S5.9).
-function useCanvasEditing(state: SessionState): CanvasEditor {
-  const { copilotkit } = useCopilotKit();
-  const { agent } = useAgent({ agentId: AGENT_NAME });
-  return {
-    design: state.design,
-    counters: state.id_counters,
-    disabled: agent.isRunning || state.stage !== "interview",
-    save: (design, counters) => {
-      agent.setState({ ...(agent.state as Record<string, unknown>), design, id_counters: counters });
-      void copilotkit.runAgent({ agent });
-    },
-  };
-}
-
 function NoAddMenu() {
   return null;
 }
@@ -227,7 +210,6 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
   const lastError = useLastError((state.last_error as ErrorInfo | null) ?? null);
-  const editor = useCanvasEditing(state);
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -261,9 +243,8 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             <ScorecardPanel scorecard={state.scorecard} />
           )}
           {state.stage === "interview" ? (
-            <CanvasEditContext.Provider value={editor}>
-              <Canvas design={state.design} />
-            </CanvasEditContext.Provider>
+            // Read-only: the interviewer records the design; the user answers in the chat.
+            <Canvas design={state.design} />
           ) : state.stage === "design_review" || state.stage === "gap_resolution" ? (
             <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
           ) : state.stage === "complete" ? (
