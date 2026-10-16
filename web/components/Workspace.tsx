@@ -7,6 +7,7 @@ import {
   useAgent,
   useCopilotKit,
   useHumanInTheLoop,
+  useRenderTool,
 } from "@copilotkit/react-core/v2";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +16,7 @@ import { AGENT_NAME, RUNTIME_PATH } from "../lib/constants";
 import { clearErrorForNewTurn } from "../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../lib/sessions";
 import { liveState, type PrdDoc } from "../lib/state";
+import { toolNote } from "../lib/tool-notes";
 import { Canvas } from "./canvas/Canvas";
 import { AllDiagrams } from "./canvas/Diagrams";
 import { ConfirmStepCard, type ConfirmStepArgs } from "./gates/ConfirmStepCard";
@@ -112,6 +114,21 @@ function useGates() {
   });
 }
 
+// The interviewer's design tools (every tool without a gate card) show as one line each in the
+// chat, so a turn that only records items does not leave an empty message.
+function useToolNotes() {
+  useRenderTool(
+    {
+      name: "*",
+      render: ({ args, result }: { args?: unknown; result?: unknown }) => {
+        const note = toolNote(args, result);
+        return note ? <p className={styles.toolNote}>{note}</p> : null;
+      },
+    },
+    [],
+  );
+}
+
 // S11.6: last_error as a dismissible alert whose Retry re-sends the last user turn.
 function useLastError(error: ErrorInfo | null) {
   const { copilotkit } = useCopilotKit();
@@ -158,13 +175,11 @@ function NoAddMenu() {
 
 const OPENING_PLACEHOLDER = "What would you like to build?";
 const ANSWER_PLACEHOLDER = "Type your answer...";
-const WELCOME =
-  "Tell me what you'd like to build, in as much or as little detail as you have. " +
-  "I'll turn it into requirements and walk you through the five design steps with questions.";
 
 function WorkspaceShell({ session }: { session: SessionDetail }) {
   useThreadHistory(session.id);
   useGates();
+  useToolNotes();
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
   const lastError = useLastError((state.last_error as ErrorInfo | null) ?? null);
@@ -222,10 +237,10 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             agentId={AGENT_NAME}
             threadId={session.id}
             // A new session opens on one question; the user's answer is the brief the
-            // interviewer records first, and from then on the interviewer leads.
+            // interviewer records first, and from then on the interviewer leads. (CopilotKit
+            // shows no welcome screen on a chat bound to a saved thread, so the input asks.)
             labels={{
               chatInputPlaceholder: agent.messages.length === 0 ? OPENING_PLACEHOLDER : ANSWER_PLACEHOLDER,
-              welcomeMessageText: WELCOME,
             }}
             // S11.7: the send and scroll-to-bottom buttons get accessible names; the attachments
             // menu has nothing to offer in this app (no attachments, no tools menu), so it is

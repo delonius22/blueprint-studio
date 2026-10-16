@@ -58,6 +58,10 @@ for (let n = 1; n <= 5; n++) {
     const tag = `s${n}-${Date.now().toString(36)}`;
     const audit = n === 1;
     const violations: Violations = [];
+    const unrendered: string[] = [];
+    page.on("console", (message) => {
+      if (message.text().includes("no renderer is registered")) unrendered.push(message.text());
+    });
 
     // Session list: create the session (by keyboard in the audited run).
     await page.goto("/");
@@ -81,6 +85,9 @@ for (let n = 1; n <= 5; n++) {
     await send(page, `FR: Users shorten URLs for ${tag}\nFR: Visitors are redirected for ${tag}`);
     await expect(page.getByRole("region", { name: /^Functional requirements/ }).getByText("FR-2")).toBeVisible();
     await expect(page.getByPlaceholder("Type your answer...")).toBeVisible();
+    // Each recorded item is a line in the chat too.
+    const chat = page.getByRole("complementary", { name: "Interview chat" });
+    await expect(chat.getByText(`✓ Recorded FR-2: Visitors are redirected for ${tag}`)).toBeVisible();
     if (audit) await scan(page, "workspace: canvas (interview)", violations);
     await send(page, "CONFIRM 1");
     await expect(page.getByRole("group", { name: /Confirm Step 1/ })).toBeVisible();
@@ -150,5 +157,6 @@ for (let n = 1; n <= 5; n++) {
     expect(detail.state.prd_versions.map((v: { version: string }) => v.version)).toEqual(["1.0", "1.1", "1.2"]);
 
     expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
+    expect(unrendered).toEqual([]); // every tool call the agent makes has a renderer
   });
 }

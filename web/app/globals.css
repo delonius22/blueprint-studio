@@ -3,6 +3,8 @@
   --bg: #ffffff;
   --fg: #1a1a1a;
   --muted: #555555;
+  /* Muted text inside the chat: CopilotKit redefines --muted there as a background colour. */
+  --note: #555555;
   --border: #c4c4c4;
   --link: #0b57d0;
   --danger: #b3261e;
@@ -15,6 +17,7 @@
     --bg: #121212;
     --fg: #f0f0f0;
     --muted: #b8b8b8;
+    --note: #b8b8b8;
     --border: #4a4a4a;
     --link: #8ab4f8;
     --danger: #f2b8b5;
