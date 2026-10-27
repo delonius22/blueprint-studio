@@ -30,10 +30,6 @@
 
 .count,
 .empty,
-.detail {
-  color: var(--muted);
-}
-
 .empty {
   font-size: 0.9rem;
   margin: 0;
@@ -67,6 +63,7 @@
 }
 
 .detail {
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -144,4 +141,9 @@
   display: flex;
   gap: 0.5rem;
   justify-content: space-between;
+}
+
+.source {
+  color: var(--muted);
+  font-size: 0.8rem;
 }

@@ -3,6 +3,7 @@
 // The gap decisions card (SPECS S6.5, S11.4): answer each gap (text required) or accept it as
 // an open risk (optional note), item by item, or accept all at once.
 import { type FormEvent, useId, useState } from "react";
+import type { CardProps } from "./types";
 import styles from "./GateCard.module.css";
 
 export type CardGap = {
@@ -15,12 +16,7 @@ export type CardGap = {
 };
 export type GapDecision = { gap_id: string; decision: "answer" | "accept"; text: string };
 
-type Props = {
-  args: Partial<{ gaps: CardGap[] }>;
-  status: "inProgress" | "executing" | "complete";
-  respond?: (decisions: GapDecision[]) => void;
-  result?: string;
-};
+type Props = CardProps<{ gaps: CardGap[] }, GapDecision[]>;
 
 export function DecideGapsCard({ args, status, respond, result }: Props) {
   const gaps = args.gaps ?? [];

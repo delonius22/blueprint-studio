@@ -3,7 +3,8 @@ import type { Design, Entity } from "../../lib/state";
 import styles from "./Canvas.module.css";
 import { CapStancePanel } from "./CapStancePanel";
 import { ArchitectureDiagram, DataModelDiagram, SequenceDiagrams } from "./Diagrams";
-import { Panel } from "./Panel";
+import { ItemSources, Panel } from "./Panel";
+import { LIST_LABELS } from "../../lib/steps";
 
 function num(value: number): string {
   return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(6)));
@@ -19,19 +20,20 @@ function entityName(entities: Entity[], id: string): string {
   return entity ? `${entity.name} (${id})` : id;
 }
 
-export function Canvas({ design }: { design: Design }) {
+export function Canvas({ design, sources = {} }: { design: Design; sources?: Record<string, string> }) {
   return (
+    <ItemSources.Provider value={sources}>
     <div className={styles.canvas}>
       <h2 className="visually-hidden">Design canvas</h2>
       <div className={styles.group}>
         <h3 className={styles.groupTitle}>Step 1 · Requirements</h3>
         <div className={styles.grid}>
           <Panel
-            title="Functional requirements"
+            title={LIST_LABELS.functional_requirements}
             items={design.functional_requirements.map((r) => ({ id: r.id, content: r.statement }))}
           />
           <Panel
-            title="Non-functional requirements"
+            title={LIST_LABELS.non_functional_requirements}
             items={design.non_functional_requirements.map((n) => ({
               id: n.id,
               content: (
@@ -49,11 +51,11 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Out of scope"
+            title={LIST_LABELS.out_of_scope}
             items={design.out_of_scope.map((o) => ({ id: o.id, content: o.text }))}
           />
           <Panel
-            title="Capacity estimates"
+            title={LIST_LABELS.capacity_estimates}
             items={design.capacity_estimates.map((e) => ({
               id: e.id,
               content: (
@@ -72,7 +74,7 @@ export function Canvas({ design }: { design: Design }) {
         <h3 className={styles.groupTitle}>Step 2 · Data & API</h3>
         <div className={styles.grid}>
           <Panel
-            title="Entities"
+            title={LIST_LABELS.entities}
             items={design.entities.map((e) => ({
               id: e.id,
               content: (
@@ -98,7 +100,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Relationships"
+            title={LIST_LABELS.relationships}
             items={design.relationships.map((r) => ({
               id: r.id,
               content: (
@@ -110,7 +112,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="API endpoints"
+            title={LIST_LABELS.endpoints}
             items={design.endpoints.map((e) => ({
               id: e.id,
               content: (
@@ -129,7 +131,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Storage choices"
+            title={LIST_LABELS.storage_choices}
             items={design.storage_choices.map((c) => ({
               id: c.id,
               content: (
@@ -151,7 +153,7 @@ export function Canvas({ design }: { design: Design }) {
         <h3 className={styles.groupTitle}>Step 3 · Architecture</h3>
         <div className={styles.grid}>
           <Panel
-            title="Components"
+            title={LIST_LABELS.components}
             items={design.components.map((c) => ({
               id: c.id,
               content: (
@@ -163,7 +165,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Data flows"
+            title={LIST_LABELS.flows}
             items={design.flows.map((f) => ({
               id: f.id,
               content: (
@@ -183,7 +185,7 @@ export function Canvas({ design }: { design: Design }) {
           />
           <CapStancePanel stance={design.cap_stance ?? null} />
           <Panel
-            title="Cache policies"
+            title={LIST_LABELS.cache_policies}
             items={design.cache_policies.map((c) => ({
               id: c.id,
               content: (
@@ -198,7 +200,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Failure modes"
+            title={LIST_LABELS.failure_modes}
             items={design.failure_modes.map((f) => ({
               id: f.id,
               content: (
@@ -218,7 +220,7 @@ export function Canvas({ design }: { design: Design }) {
         <h3 className={styles.groupTitle}>Step 4 · Scale & reliability</h3>
         <div className={styles.grid}>
           <Panel
-            title="Single points of failure"
+            title={LIST_LABELS.spofs}
             items={design.spofs.map((s) => ({
               id: s.id,
               content: (
@@ -232,7 +234,7 @@ export function Canvas({ design }: { design: Design }) {
             }))}
           />
           <Panel
-            title="Observability"
+            title={LIST_LABELS.observability}
             items={design.observability.map((o) => ({
               id: o.id,
               content: (
@@ -249,7 +251,7 @@ export function Canvas({ design }: { design: Design }) {
         <h3 className={styles.groupTitle}>Step 5 · Trade-offs & extensions</h3>
         <div className={styles.grid}>
           <Panel
-            title="Trade-offs"
+            title={LIST_LABELS.tradeoffs}
             items={design.tradeoffs.map((t) => ({
               id: t.id,
               content: (
@@ -262,9 +264,10 @@ export function Canvas({ design }: { design: Design }) {
               ),
             }))}
           />
-          <Panel title="Extensions" items={design.extensions.map((e) => ({ id: e.id, content: e.text }))} />
+          <Panel title={LIST_LABELS.extensions} items={design.extensions.map((e) => ({ id: e.id, content: e.text }))} />
         </div>
       </div>
     </div>
+    </ItemSources.Provider>
   );
 }

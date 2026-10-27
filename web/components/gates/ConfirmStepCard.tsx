@@ -2,6 +2,7 @@
 
 // The step confirmation card (SPECS S5.7, S11.4): approve, or reject with what is missing.
 import { type FormEvent, useId, useState } from "react";
+import type { CardProps } from "./types";
 import { STEP_NAMES } from "../../lib/steps";
 import styles from "./GateCard.module.css";
 
@@ -9,7 +10,7 @@ export type ConfirmStepArgs = { step: number; summary: string };
 export type ConfirmStepAnswer = { approved: true } | { approved: false; missing: string };
 
 /** S5.6: a call answered by the graph with blockers never opened a card, so none is shown. */
-export function isBlocked(result: string | undefined): boolean {
+function isBlocked(result: string | undefined): boolean {
   try {
     const value = JSON.parse(result ?? "") as unknown;
     return Boolean(value && typeof value === "object" && "blockers" in value);
@@ -18,7 +19,7 @@ export function isBlocked(result: string | undefined): boolean {
   }
 }
 
-export function parseAnswer(result: string | undefined): ConfirmStepAnswer | null {
+function parseAnswer(result: string | undefined): ConfirmStepAnswer | null {
   try {
     const value = JSON.parse(result ?? "") as unknown;
     return value && typeof value === "object" && "approved" in value ? (value as ConfirmStepAnswer) : null;
@@ -27,12 +28,7 @@ export function parseAnswer(result: string | undefined): ConfirmStepAnswer | nul
   }
 }
 
-type Props = {
-  args: Partial<ConfirmStepArgs>;
-  status: "inProgress" | "executing" | "complete";
-  respond?: (answer: ConfirmStepAnswer) => void;
-  result?: string;
-};
+type Props = CardProps<ConfirmStepArgs, ConfirmStepAnswer>;
 
 export function ConfirmStepCard({ args, status, respond, result }: Props) {
   const [rejecting, setRejecting] = useState(false);

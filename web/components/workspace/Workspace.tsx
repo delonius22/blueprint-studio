@@ -1,173 +1,29 @@
 "use client";
 
 // The session workspace (SPECS S11.1, S11.2): CopilotKit wired to this session's thread (S4.4).
-import {
-  CopilotChat,
-  CopilotKit,
-  useAgent,
-  useCopilotKit,
-  useHumanInTheLoop,
-  useRenderTool,
-} from "@copilotkit/react-core/v2";
+import { CopilotChat, CopilotKit, useAgent } from "@copilotkit/react-core/v2";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import { AGENT_NAME, RUNTIME_PATH } from "../../lib/constants";
-import { clearErrorForNewTurn } from "../../lib/errors";
 import { ApiError, type SessionDetail, sessionsApi } from "../../lib/sessions";
-import { liveState, type PrdDoc } from "../../lib/state";
-import { toolNote } from "../../lib/tool-notes";
+import { liveState } from "../../lib/state";
+import { AttachControl } from "../attachments/AttachControl";
+import { SourcesPanel } from "../attachments/SourcesPanel";
 import { Canvas } from "../canvas/Canvas";
 import { AllDiagrams } from "../canvas/Diagrams";
-import { ConfirmStepCard, type ConfirmStepArgs } from "../gates/ConfirmStepCard";
-import { type CardGap, DecideGapsCard } from "../gates/DecideGapsCard";
-import { TicketView } from "../delivery/TicketView";
 import { CompletionView } from "../delivery/CompletionView";
-import { SignOffCard } from "../gates/SignOffCard";
-import { DownloadsMenu } from "./DownloadsMenu";
 import { PrdViewer } from "../delivery/PrdViewer";
-import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
+import { TicketView } from "../delivery/TicketView";
+import { useGates } from "../gates/useGates";
 import { GapRegister } from "../review/GapRegister";
 import { ScorecardPanel } from "../review/ScorecardPanel";
+import { DownloadsMenu } from "./DownloadsMenu";
+import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
+import { itemSources, useAttachments, useLastError, useThreadHistory, useToolNotes } from "./hooks";
 import { ReviewModelWarning } from "./ReviewModelWarning";
 import { StageTracker } from "./StageTracker";
 import { TokenMeter } from "./TokenMeter";
 import styles from "./Workspace.module.css";
-
-// The runtime keeps a thread's events in memory only. After a restart it has nothing to
-// replay, so an empty thread is re-synced from the agent's checkpoint with a run that adds
-// no message: the graph ends at once and the agent sends its message and state snapshots.
-function useThreadHistory(sessionId: string) {
-  const { copilotkit } = useCopilotKit();
-  const { agent } = useAgent({ agentId: AGENT_NAME });
-  useEffect(() => {
-    let cancelled = false;
-    agent.threadId = sessionId;
-    void (async () => {
-      await copilotkit.connectAgent({ agent });
-      if (!cancelled && agent.messages.length === 0) await copilotkit.runAgent({ agent });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [copilotkit, agent, sessionId]);
-}
-
-// Approval gates are frontend tools rendered as cards (PRD D5, SPECS S11.4). Since the build only
-// the step confirmations, the gap decisions and the PRD sign-off stop for the user.
-function useGates() {
-  useHumanInTheLoop<ConfirmStepArgs>({
-    name: "confirm_step",
-    description:
-      "Ask the user to confirm that the current framework step is complete before moving to " +
-      "the next one. Call it only when the step's questions are answered and recorded. " +
-      "step: the current step number. summary: a short summary of what the step established. " +
-      'The answer is {"approved": true} or {"approved": false, "missing": "<what the user says is missing>"}.',
-    parameters: z.object({ step: z.number().int().min(1).max(5), summary: z.string() }),
-    render: ({ args, status, respond, result }) => (
-      <ConfirmStepCard
-        args={args}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (answer) => void respond(answer) : undefined}
-        result={result}
-      />
-    ),
-  });
-  useHumanInTheLoop<{ gaps: CardGap[] }>({
-    name: "decide_gaps",
-    description:
-      "The app asks the user to answer or accept each open gap from the design review. " +
-      "Never call this yourself.",
-    parameters: z.object({
-      gaps: z.array(
-        z.object({
-          id: z.string(),
-          lens: z.string(),
-          severity: z.string(),
-          item_ids: z.array(z.string()),
-          risk: z.string(),
-          decision_needed: z.string(),
-        }),
-      ),
-    }),
-    render: ({ args, status, respond, result }) => (
-      <DecideGapsCard
-        args={args}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (decisions) => void respond(decisions) : undefined}
-        result={result}
-      />
-    ),
-  });
-  useHumanInTheLoop<{ prd: PrdDoc }>({
-    name: "sign_off_prd",
-    description: "The app asks the user to sign off PRD v1.0 or reject it with a reason. Never call this yourself.",
-    parameters: z.object({ prd: z.any() }),
-    render: ({ args, status, respond, result }) => (
-      <SignOffCard
-        args={args as Partial<{ prd: PrdDoc }>}
-        status={String(status) as "inProgress" | "executing" | "complete"}
-        respond={respond ? (answer) => void respond(answer) : undefined}
-        result={result}
-      />
-    ),
-  });
-}
-
-// The interviewer's design tools (every tool without a gate card) show as one line each in the
-// chat, so a turn that only records items does not leave an empty message.
-function useToolNotes() {
-  useRenderTool(
-    {
-      name: "*",
-      render: ({ args, result }: { args?: unknown; result?: unknown }) => {
-        const note = toolNote(args, result);
-        return note ? <p className={styles.toolNote}>{note}</p> : null;
-      },
-    },
-    [],
-  );
-}
-
-// S11.6: last_error as a dismissible alert whose Retry re-sends the last user turn.
-function useLastError(error: ErrorInfo | null) {
-  const { copilotkit } = useCopilotKit();
-  const { agent } = useAgent({ agentId: AGENT_NAME });
-  const failedTurn = useRef<string | null>(null);
-  const [dismissed, setDismissed] = useState<ErrorInfo | null>(null);
-  const [retrying, setRetrying] = useState(false);
-
-  useEffect(() => {
-    if (error && failedTurn.current === null) {
-      const lastUser = [...agent.messages].reverse().find((m) => m.role === "user");
-      failedTurn.current = lastUser?.id ?? null;
-    }
-    if (!error) failedTurn.current = null;
-  }, [agent, error]);
-
-  useEffect(() => {
-    const subscription = agent.subscribe({
-      onRunInitialized: ({ state, messages }) => {
-        const next = clearErrorForNewTurn(state as Record<string, unknown>, messages, failedTurn.current);
-        return next ? { state: next } : undefined;
-      },
-    });
-    return () => subscription.unsubscribe();
-  }, [agent]);
-
-  async function retry() {
-    setRetrying(true);
-    try {
-      agent.setState({ ...(agent.state as Record<string, unknown>), last_error: null });
-      await copilotkit.runAgent({ agent });
-    } finally {
-      setRetrying(false);
-    }
-  }
-
-  const visible = error && error !== dismissed && error.message !== dismissed?.message ? error : null;
-  return { visible, retry, dismiss: () => setDismissed(error), retrying };
-}
 
 function NoAddMenu() {
   return null;
@@ -183,6 +39,8 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
   const { agent } = useAgent({ agentId: AGENT_NAME });
   const state = liveState(agent.state, session.state);
   const lastError = useLastError((state.last_error as ErrorInfo | null) ?? null);
+  const interviewing = state.stage === "interview";
+  const files = useAttachments(session.id, `${state.stage}-${state.attachments?.length ?? 0}`);
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -217,7 +75,16 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           )}
           {state.stage === "interview" ? (
             // Read-only: the interviewer records the design; the user answers in the chat.
-            <Canvas design={state.design} />
+            <>
+              <SourcesPanel
+                sessionId={session.id}
+                listing={files.listing.attachments}
+                state={state}
+                canRemove={!files.running}
+                onRemove={(id) => void files.remove(id)}
+              />
+              <Canvas design={state.design} sources={itemSources(state)} />
+            </>
           ) : state.stage === "design_review" || state.stage === "gap_resolution" ? (
             <GapRegister gaps={state.gaps} design={state.design} stage={state.stage} />
           ) : state.stage === "complete" ? (
@@ -233,6 +100,14 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           )}
         </main>
         <aside className={styles.chat} aria-label="Interview chat">
+          {interviewing && (
+            <AttachControl
+              sessionId={session.id}
+              accepts={files.listing.accepts}
+              disabled={files.running}
+              onAttached={(added) => void files.attached(added)}
+            />
+          )}
           <CopilotChat
             agentId={AGENT_NAME}
             threadId={session.id}
@@ -242,9 +117,9 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             labels={{
               chatInputPlaceholder: agent.messages.length === 0 ? OPENING_PLACEHOLDER : ANSWER_PLACEHOLDER,
             }}
-            // S11.7: the send and scroll-to-bottom buttons get accessible names; the attachments
-            // menu has nothing to offer in this app (no attachments, no tools menu), so it is
-            // not rendered.
+            // S11.7: the send and scroll-to-bottom buttons get accessible names. CopilotKit's own
+            // attachments menu is not rendered: files are attached above the chat instead, so
+            // they reach the agent's import (SPEC-document-import §5).
             input={{ sendButton: { "aria-label": "Send message" }, addMenuButton: NoAddMenu }}
             scrollView={{ scrollToBottomButton: { "aria-label": "Scroll to the latest message" } }}
           />

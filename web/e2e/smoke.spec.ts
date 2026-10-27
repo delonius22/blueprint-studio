@@ -89,6 +89,20 @@ for (let n = 1; n <= 5; n++) {
     const chat = page.getByRole("complementary", { name: "Interview chat" });
     await expect(chat.getByText(`✓ Recorded FR-2: Visitors are redirected for ${tag}`)).toBeVisible();
     if (audit) await scan(page, "workspace: canvas (interview)", violations);
+    if (audit) {
+      // Document import: attach a brief, review what it says, and record it with its source.
+      const brief = `# Brief\n\nLinks can be named for ${tag}.\n`;
+      await page
+        .getByLabel("Files to attach")
+        .setInputFiles({ name: "brief.md", mimeType: "text/markdown", buffer: Buffer.from(brief) });
+      const review = page.getByRole("form", { name: "Review what your files say" });
+      await expect(review).toBeVisible();
+      await expect(page.getByRole("region", { name: /^Attached files/ })).toContainText("ATT-1: brief.md");
+      await scan(page, "gate card: review_import + attached files", violations);
+      await review.getByRole("button", { name: "Record accepted items" }).click();
+      await expect(page.getByRole("region", { name: /^Functional requirements/ }).getByText("FR-3")).toBeVisible();
+      await expect(page.getByText("from brief.md · Brief")).toBeVisible();
+    }
     await send(page, "CONFIRM 1");
     await expect(page.getByRole("group", { name: /Confirm Step 1/ })).toBeVisible();
     if (audit) await scan(page, "gate card: confirm_step", violations);
@@ -153,6 +167,7 @@ for (let n = 1; n <= 5; n++) {
     expect(detail.state.design.functional_requirements.map((r: { statement: string }) => r.statement)).toEqual([
       `Users shorten URLs for ${tag}`,
       `Visitors are redirected for ${tag}`,
+      ...(audit ? [`Links can be named for ${tag}`] : []),
     ]);
     expect(detail.state.prd_versions.map((v: { version: string }) => v.version)).toEqual(["1.0", "1.1", "1.2"]);
 

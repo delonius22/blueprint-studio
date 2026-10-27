@@ -5,6 +5,8 @@ export type SessionSummary = components["schemas"]["SessionSummary"];
 export type SessionPage = components["schemas"]["SessionPage"];
 export type SessionDetail = components["schemas"]["SessionDetail"];
 export type DownloadItem = components["schemas"]["DownloadItem"];
+export type AttachmentListing = components["schemas"]["AttachmentListing"];
+export type UploadedAttachment = components["schemas"]["UploadedAttachment"];
 type ErrorBody = components["schemas"]["ErrorBody"];
 
 export class ApiError extends Error {
@@ -18,9 +20,10 @@ export class ApiError extends Error {
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  const file = init?.body instanceof Blob;
   const response = await fetch(`/api/sessions${path}`, {
     ...init,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": file ? "application/octet-stream" : "application/json" },
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as ErrorBody | null;
@@ -54,7 +57,23 @@ export const sessionsApi = {
   remove(id: string): Promise<void> {
     return call(`/${encodeURIComponent(id)}`, { method: "DELETE" });
   },
+  attachments(id: string): Promise<AttachmentListing> {
+    return call(`/${encodeURIComponent(id)}/attachments`);
+  },
+  attach(id: string, file: File): Promise<UploadedAttachment> {
+    const query = new URLSearchParams({ name: file.name });
+    return call(`/${encodeURIComponent(id)}/attachments?${query}`, { method: "POST", body: file });
+  },
+  detach(id: string, attachmentId: string): Promise<void> {
+    return call(`/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, {
+      method: "DELETE",
+    });
+  },
 };
+
+export function attachmentUrl(sessionId: string, attachmentId: string): string {
+  return `/api/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(attachmentId)}/content`;
+}
 
 const STAGE_LABELS: Record<string, string> = {
   interview: "Interview",
