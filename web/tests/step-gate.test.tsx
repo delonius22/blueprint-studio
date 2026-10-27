@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmStepCard } from "../components/gates/ConfirmStepCard";
-import { StageTracker } from "../components/StageTracker";
+import { StageTracker } from "../components/workspace/StageTracker";
 
 afterEach(cleanup);
 

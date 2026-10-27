@@ -2,7 +2,7 @@
 
 // The PRD viewer (SPECS S11.2): the draft and every frozen version, with a version switcher.
 import { useState } from "react";
-import type { PrdDoc, PrdVersion } from "../lib/state";
+import type { PrdDoc, PrdVersion } from "../../lib/state";
 import styles from "./PrdViewer.module.css";
 
 type Props = { draft: PrdDoc | null; versions: PrdVersion[]; stage: string };

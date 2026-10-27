@@ -3,7 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { Canvas } from "../components/canvas/Canvas";
-import { ScorecardPanel } from "../components/ScorecardPanel";
+import { ScorecardPanel } from "../components/review/ScorecardPanel";
 import { EMPTY_DESIGN, type Scorecard } from "../lib/state";
 
 afterEach(cleanup);

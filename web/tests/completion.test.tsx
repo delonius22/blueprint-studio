@@ -3,7 +3,7 @@
 // "Download all (.zip)", from the agent's listing (SPECS S11.5, S10.3).
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { CompletionView } from "../components/CompletionView";
+import { CompletionView } from "../components/delivery/CompletionView";
 
 afterEach(() => {
   cleanup();

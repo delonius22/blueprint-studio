@@ -2,7 +2,7 @@
 // T-15: the ticket view shows the breakdown with blocking edges (SPECS S11.2).
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { TicketView } from "../components/TicketView";
+import { TicketView } from "../components/delivery/TicketView";
 import { buildWaves, type Ticket } from "../lib/state";
 
 afterEach(cleanup);

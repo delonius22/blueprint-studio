@@ -1,5 +1,5 @@
 // The final scorecard (SPECS S2.8, S5.8, PRD FR-9): five dimensions, each with quoted evidence.
-import type { Scorecard } from "../lib/state";
+import type { Scorecard } from "../../lib/state";
 import styles from "./ScorecardPanel.module.css";
 
 const LABELS: Record<string, string> = {

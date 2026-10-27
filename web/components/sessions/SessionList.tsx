@@ -4,7 +4,7 @@
 // rename and delete.
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { ApiError, type SessionSummary, sessionsApi, stageLabel } from "../lib/sessions";
+import { ApiError, type SessionSummary, sessionsApi, stageLabel } from "../../lib/sessions";
 import styles from "./SessionList.module.css";
 
 const PAGE_SIZE = 20;

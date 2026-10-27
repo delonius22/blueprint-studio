@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SessionList } from "../components/SessionList";
+import { SessionList } from "../components/sessions/SessionList";
 import styles from "./page.module.css";
 
 export default function Home() {

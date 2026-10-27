@@ -4,9 +4,9 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DownloadsMenu } from "../components/DownloadsMenu";
+import { DownloadsMenu } from "../components/workspace/DownloadsMenu";
 import { SignOffCard } from "../components/gates/SignOffCard";
-import { PrdViewer } from "../components/PrdViewer";
+import { PrdViewer } from "../components/delivery/PrdViewer";
 import { downloadFileName } from "../lib/sessions";
 import type { PrdDoc } from "../lib/state";
 

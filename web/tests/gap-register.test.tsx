@@ -3,7 +3,7 @@
 // and decision needed.
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { GapRegister } from "../components/GapRegister";
+import { GapRegister } from "../components/review/GapRegister";
 import { EMPTY_DESIGN, type Gap, itemLabel } from "../lib/state";
 
 afterEach(cleanup);

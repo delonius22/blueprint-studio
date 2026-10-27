@@ -3,7 +3,7 @@
 // The completion view (SPECS S11.5): every available download with its file name, and
 // "Download all (.zip)", rendered from the agent's listing (S10.3) — never recomputed here.
 import { useEffect, useState } from "react";
-import { type DownloadItem, downloadFileName, downloadUrl, sessionsApi } from "../lib/sessions";
+import { type DownloadItem, downloadFileName, downloadUrl, sessionsApi } from "../../lib/sessions";
 import styles from "./CompletionView.module.css";
 
 export function CompletionView({ sessionId, sessionName }: { sessionId: string; sessionName: string }) {

@@ -1,5 +1,5 @@
 // The ticket view (SPECS S11.2): the breakdown with its blocking edges and build waves.
-import { buildWaves, type Ticket } from "../lib/state";
+import { buildWaves, type Ticket } from "../../lib/state";
 import styles from "./TicketView.module.css";
 
 export function TicketView({ tickets, stage }: { tickets: Ticket[]; stage: string }) {

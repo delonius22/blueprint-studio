@@ -1,6 +1,6 @@
 // The gap register (SPECS S2.9, S11.2): every gap's lens, severity, affected items, risk and
 // the decision needed, during design review and gap resolution.
-import { type Design, type Gap, itemLabel } from "../lib/state";
+import { type Design, type Gap, itemLabel } from "../../lib/state";
 import styles from "./GapRegister.module.css";
 
 export function GapRegister({ gaps, design, stage }: { gaps: Gap[]; design: Design; stage: string }) {

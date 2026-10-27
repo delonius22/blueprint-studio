@@ -2,7 +2,7 @@
 
 // The header's downloads menu (SPECS S11.2, S10.3): availability comes from the agent's listing.
 import { useEffect, useState } from "react";
-import { type DownloadItem, downloadFileName, downloadUrl, sessionsApi } from "../lib/sessions";
+import { type DownloadItem, downloadFileName, downloadUrl, sessionsApi } from "../../lib/sessions";
 import styles from "./DownloadsMenu.module.css";
 
 type Props = { sessionId: string; sessionName: string; refreshKey: string };

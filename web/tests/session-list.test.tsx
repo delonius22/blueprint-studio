@@ -4,7 +4,7 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionList } from "../components/SessionList";
+import { SessionList } from "../components/sessions/SessionList";
 import type { SessionSummary } from "../lib/sessions";
 
 function session(id: string, name: string, stage = "interview", step = 1): SessionSummary {

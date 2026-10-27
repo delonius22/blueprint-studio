@@ -1,7 +1,7 @@
 // The header's stage tracker (SPECS S11.2): the five steps with current and confirmed ones,
 // and the session's stage once the interview is over.
-import { stageLabel } from "../lib/sessions";
-import { STEP_NAMES } from "../lib/steps";
+import { stageLabel } from "../../lib/sessions";
+import { STEP_NAMES } from "../../lib/steps";
 import styles from "./StageTracker.module.css";
 
 type Props = { stage: string; currentStep: number; confirmedSteps: number[] };
