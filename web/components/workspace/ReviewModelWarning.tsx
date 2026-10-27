@@ -4,7 +4,7 @@ import styles from "./Workspace.module.css";
 export function ReviewModelWarning({ distinct }: { distinct: boolean }) {
   if (distinct) return null;
   return (
-    <p role="note" className={styles.warning}>
+    <p role="note" className={`panel ${styles.warning}`}>
       The review model is the same as the interview model, so the cross-model design check is not active.
       Configure a different REVIEW_MODEL to enable it.
     </p>

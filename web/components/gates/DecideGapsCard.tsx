@@ -124,7 +124,7 @@ export function DecideGapsCard({ args, status, respond, result }: Props) {
       })}
       {ready && (
         <div className={styles.actions}>
-          <button type="submit" className={styles.primary} disabled={!complete}>
+          <button type="submit" className="go" disabled={!complete}>
             Submit decisions
           </button>
           <button

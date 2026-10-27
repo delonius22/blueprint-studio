@@ -52,7 +52,7 @@ export function SignOffCard({ args, status, respond, result }: Props) {
       )}
       {status === "executing" && respond && !rejecting && (
         <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={() => respond({ approved: true })}>
+          <button type="button" className="go" onClick={() => respond({ approved: true })}>
             Sign off v1.0
           </button>
           <button type="button" onClick={() => setRejecting(true)}>

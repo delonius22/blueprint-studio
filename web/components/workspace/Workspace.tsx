@@ -17,6 +17,7 @@ import { TicketView } from "../delivery/TicketView";
 import { useGates } from "../gates/useGates";
 import { GapRegister } from "../review/GapRegister";
 import { ScorecardPanel } from "../review/ScorecardPanel";
+import { ThemeSwitcher } from "../theme/ThemeSwitcher";
 import { DownloadsMenu } from "./DownloadsMenu";
 import { ErrorAlert, type ErrorInfo } from "./ErrorAlert";
 import { itemSources, useAttachments, useLastError, useThreadHistory, useToolNotes } from "./hooks";
@@ -43,7 +44,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
   const files = useAttachments(session.id, `${state.stage}-${state.attachments?.length ?? 0}`);
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
+      <header className={`panel ${styles.header}`}>
         <Link href="/">Sessions</Link>
         <h1>{session.name}</h1>
         <StageTracker
@@ -52,6 +53,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
           confirmedSteps={state.confirmed_steps}
         />
         <TokenMeter used={state.tokens_used} budget={state.token_budget} />
+        <ThemeSwitcher />
         <DownloadsMenu
           sessionId={session.id}
           sessionName={session.name}
@@ -99,7 +101,7 @@ function WorkspaceShell({ session }: { session: SessionDetail }) {
             <PrdViewer draft={state.prd_draft ?? null} versions={state.prd_versions} stage={state.stage} />
           )}
         </main>
-        <aside className={styles.chat} aria-label="Interview chat">
+        <aside className={`panel ${styles.chat}`} aria-label="Interview chat">
           {interviewing && (
             <AttachControl
               sessionId={session.id}
@@ -148,7 +150,7 @@ export function Workspace({ sessionId }: { sessionId: string }) {
 
   if (error) {
     return (
-      <main className={styles.message}>
+      <main className={`panel ${styles.message}`}>
         <p role="alert">{error}</p>
         <Link href="/">Back to sessions</Link>
       </main>
@@ -156,7 +158,7 @@ export function Workspace({ sessionId }: { sessionId: string }) {
   }
   if (!session) {
     return (
-      <main className={styles.message} aria-busy="true">
+      <main className={`panel ${styles.message}`} aria-busy="true">
         <p>Loading session…</p>
       </main>
     );

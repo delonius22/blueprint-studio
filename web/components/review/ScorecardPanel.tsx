@@ -12,7 +12,7 @@ const LABELS: Record<string, string> = {
 
 export function ScorecardPanel({ scorecard }: { scorecard: Scorecard }) {
   return (
-    <section className={styles.scorecard} aria-labelledby="scorecard-title">
+    <section className={`panel ${styles.scorecard}`} aria-labelledby="scorecard-title">
       <h2 id="scorecard-title">Scorecard</h2>
       <ul className={styles.dimensions}>
         {scorecard.dimensions.map((d) => (

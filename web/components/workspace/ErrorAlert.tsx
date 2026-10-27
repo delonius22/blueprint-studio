@@ -7,8 +7,10 @@ type Props = { error: ErrorInfo; onRetry: () => void; onDismiss: () => void; bus
 
 export function ErrorAlert({ error, onRetry, onDismiss, busy = false }: Props) {
   return (
-    <div role="alert" className={styles.alert}>
-      <p className={styles.message}>{error.message}</p>
+    <div role="alert" className={`panel ${styles.alert}`}>
+      <p className={styles.message}>
+        <span className={styles.flag}>Error</span> {error.message}
+      </p>
       <div className={styles.actions}>
         {error.retryable && (
           <button type="button" onClick={onRetry} disabled={busy}>

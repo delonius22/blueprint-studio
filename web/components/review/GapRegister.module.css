@@ -1,10 +1,10 @@
 .register {
-  padding: 1rem 1.25rem;
+  padding: 16px 18px;
 }
 
 .register h2 {
-  font-size: 1.1rem;
-  margin: 0 0 0.5rem;
+  font-size: 20px;
+  margin: 0 0 10px;
 }
 
 .scroll {
@@ -13,16 +13,21 @@
 
 .register table {
   border-collapse: collapse;
-  font-size: 0.9rem;
   width: 100%;
 }
 
 .register th,
 .register td {
   border-bottom: 1px solid var(--border);
-  padding: 0.4rem 0.5rem;
+  padding: 6px 8px;
   text-align: left;
   vertical-align: top;
+}
+
+.register th {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  font-weight: 400;
 }
 
 .items {
@@ -33,24 +38,30 @@
 
 .note {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
+/* Severity chips: status fills with dark text and a ring (DESIGN.md, Status). */
 .high,
 .medium,
 .low {
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0 0.35rem;
+  box-shadow: var(--frame-tag);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  padding: 1px 6px;
+  white-space: nowrap;
 }
 
 .high {
-  color: var(--danger);
+  background: var(--crit-fill);
+  color: var(--on-status);
 }
 
-.medium,
+.medium {
+  background: var(--warn-fill);
+  color: var(--on-status);
+}
+
 .low {
   color: var(--fg);
 }

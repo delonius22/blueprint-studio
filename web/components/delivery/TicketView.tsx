@@ -5,7 +5,7 @@ import styles from "./TicketView.module.css";
 export function TicketView({ tickets, stage }: { tickets: Ticket[]; stage: string }) {
   if (tickets.length === 0) {
     return (
-      <section className={styles.view} aria-labelledby="tickets-title">
+      <section className={`panel ${styles.view}`} aria-labelledby="tickets-title">
         <h2 id="tickets-title">Tickets</h2>
         <p aria-live="polite">The tickets are being planned from the current PRD…</p>
       </section>
@@ -13,7 +13,7 @@ export function TicketView({ tickets, stage }: { tickets: Ticket[]; stage: strin
   }
   const waves = buildWaves(tickets);
   return (
-    <section className={styles.view} aria-labelledby="tickets-title">
+    <section className={`panel ${styles.view}`} aria-labelledby="tickets-title">
       <h2 id="tickets-title">Tickets {stage === "complete" ? "(approved)" : "(awaiting your review)"}</h2>
       <p className={styles.muted}>
         {tickets.length} tickets in {waves.length} build wave{waves.length === 1 ? "" : "s"}:{" "}

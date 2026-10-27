@@ -1,21 +1,28 @@
 .alert {
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--danger);
-  border-left-width: 4px;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  gap: 8px 16px;
   justify-content: space-between;
-  margin: 0.75rem 1.25rem 0;
-  padding: 0.6rem 0.9rem;
+  margin: 0 9px 6px 3px;
+  padding: 10px 16px;
 }
 
 .message {
   margin: 0;
 }
 
+.flag {
+  background: var(--crit-fill);
+  box-shadow: var(--frame-tag);
+  color: var(--on-status);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  margin-right: 6px;
+  padding: 1px 6px;
+}
+
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }

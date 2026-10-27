@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono, Pixelify_Sans, Silkscreen, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 import "@copilotkit/react-core/v2/styles.css";
+import { Sky } from "../components/theme/Sky";
+import { THEME_SCRIPT } from "../lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,25 +11,27 @@ export const metadata: Metadata = {
   description: "Design a system with an AI interviewer, then take away a signed-off PRD and tickets.",
 };
 
-// The app follows the system colour scheme with a media query; CopilotKit's chat switches to
-// dark only under a `dark` class. This sets that class from the same setting before the first
-// paint, and keeps it in step when the setting changes, so the chat is never a white panel in
-// a dark page.
-const THEME_SCRIPT = `(() => {
-  const dark = window.matchMedia("(prefers-color-scheme: dark)");
-  const apply = () => document.documentElement.classList.toggle("dark", dark.matches);
-  apply();
-  dark.addEventListener("change", apply);
-})();`;
+// The faces of the three themes (DESIGN.md, Typography), self-hosted by next/font.
+const pixel = Pixelify_Sans({ subsets: ["latin"], variable: "--font-pixel" });
+const silk = Silkscreen({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-silk" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jb" });
+const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk" });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // The class is set by the script above, so the server's markup cannot know it.
-    <html lang="en" suppressHydrationWarning>
+    // data-theme and the `dark` class are set by THEME_SCRIPT, so the server cannot know them.
+    <html
+      lang="en"
+      className={[pixel.variable, silk.variable, mono.variable, grotesk.variable].join(" ")}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <Sky />
+        <div className="app">{children}</div>
+      </body>
     </html>
   );
 }

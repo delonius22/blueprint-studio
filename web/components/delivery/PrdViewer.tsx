@@ -32,7 +32,7 @@ export function PrdViewer({ draft, versions, stage }: Props) {
 
   if (!doc) {
     return (
-      <section className={styles.viewer} aria-labelledby="prd-title">
+      <section className={`panel ${styles.viewer}`} aria-labelledby="prd-title">
         <h2 id="prd-title">PRD</h2>
         <p aria-live="polite">The PRD is being drafted from the design record and gap register…</p>
       </section>
@@ -41,7 +41,7 @@ export function PrdViewer({ draft, versions, stage }: Props) {
   const features = new Map(doc.features.map((f) => [f.id, f.name]));
   const extended = (doc.solution ?? "") !== "" || (doc.user_stories ?? []).length > 0;
   return (
-    <section className={styles.viewer} aria-labelledby="prd-title">
+    <section className={`panel ${styles.viewer}`} aria-labelledby="prd-title">
       <div className={styles.top}>
         <h2 id="prd-title">
           PRD {selected === DRAFT ? "draft" : `v${selected}`}

@@ -24,13 +24,13 @@ export function CompletionView({ sessionId, sessionName }: { sessionId: string; 
   const files = (items ?? []).filter((i) => i.available && i.kind !== "bundle.zip");
   const bundle = (items ?? []).find((i) => i.kind === "bundle.zip" && i.available);
   return (
-    <section className={styles.completion} aria-labelledby="completion-title">
+    <section className={`panel ${styles.completion}`} aria-labelledby="completion-title">
       <h2 id="completion-title">Your design is complete</h2>
       {failed && <p role="alert">The downloads could not be listed. Reload the page to try again.</p>}
       {items === null && !failed && <p aria-live="polite">Listing your documents…</p>}
       {bundle && (
         <p>
-          <a className={styles.all} href={downloadUrl(sessionId, bundle.kind)} download={downloadFileName(bundle.kind, sessionName)}>
+          <a className={`go ${styles.all}`} href={downloadUrl(sessionId, bundle.kind)} download={downloadFileName(bundle.kind, sessionName)}>
             Download all (.zip)
           </a>
         </p>

@@ -2,40 +2,45 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .tracker ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 8px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px;
 }
 
 .tracker li {
   align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  box-shadow: var(--frame-tag);
   display: flex;
-  font-size: 0.8rem;
-  gap: 0.3rem;
-  padding: 0.1rem 0.6rem;
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px;
 }
 
 .confirmed {
-  background: var(--surface);
+  background: var(--well);
 }
 
 .current {
-  border-color: var(--link);
-  border-width: 2px;
-  font-weight: 600;
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  font-weight: 700;
 }
 
 .upcoming {
   color: var(--muted);
+}
+
+.check {
+  shape-rendering: crispEdges;
 }
 
 .name {
@@ -43,7 +48,8 @@
 }
 
 .stage {
-  font-weight: 600;
+  font-family: var(--font-label);
+  font-size: var(--label-size);
   margin: 0;
 }
 

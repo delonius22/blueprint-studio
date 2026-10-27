@@ -1,44 +1,49 @@
 .canvas {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem 1.25rem;
+  gap: 26px;
+  padding: 8px 0 12px;
 }
 
 .groupTitle {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
+  font-size: 18px;
+  margin: 0 0 12px;
 }
 
 .grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 18px;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
 }
 
 .panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
+  background: var(--panel);
+  box-shadow: var(--frame-panel);
+  margin: 3px 9px 9px 3px;
+  padding: 14px 16px;
 }
 
 .panel h3 {
-  font-size: 0.95rem;
-  margin: 0 0 0.5rem;
+  font-size: 16px;
+  margin: 0 0 10px;
 }
 
-.count,
-.empty,
+.count {
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .empty {
-  font-size: 0.9rem;
+  color: var(--muted);
   margin: 0;
 }
 
 .items {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -46,14 +51,13 @@
 
 .item {
   display: flex;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 .id {
-  font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
-  font-weight: 600;
-  min-width: 3.5rem;
+  color: var(--ink-soft);
+  font-weight: 700;
+  min-width: 4.5rem;
 }
 
 .content {
@@ -64,40 +68,41 @@
 
 .detail {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 12px;
+}
+
+.tag,
+.proposed,
+.decided {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  margin: 0 2px;
+  padding: 0 5px;
 }
 
 .tag {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 0.75rem;
-  padding: 0 0.3rem;
+  box-shadow: var(--frame-tag);
 }
 
 .fields {
   list-style: none;
-  margin: 0.2rem 0;
+  margin: 4px 0;
   padding: 0;
 }
 
 .fields .tag {
-  margin-left: 0.3rem;
+  margin-left: 6px;
 }
 
-.proposed,
-.decided {
-  border-radius: 4px;
-  font-size: 0.75rem;
-  padding: 0 0.35rem;
-}
-
+/* A proposed choice is still open; a decided one is filled. */
 .proposed {
-  border: 1px dashed var(--danger);
-  color: var(--danger);
+  outline: 2px dashed var(--fg);
+  outline-offset: -2px;
 }
 
 .decided {
-  border: 1px solid var(--fg);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
 }
 
 .wide {
@@ -105,7 +110,11 @@
 }
 
 .diagram {
+  background: #ffffff;
+  box-shadow: var(--frame-inner);
+  margin: 2px;
   overflow-x: auto;
+  padding: 10px;
 }
 
 .diagram svg {
@@ -113,37 +122,35 @@
   max-width: 100%;
 }
 
-.source {
-  margin-top: 0.5rem;
-}
-
-.source pre {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.8rem;
-  overflow-x: auto;
-  padding: 0.5rem;
-}
-
 .steps {
-  margin: 0.2rem 0 0;
+  margin: 4px 0 0;
   padding-left: 1.2rem;
 }
 
 .missing {
   color: var(--danger);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 .panelHeader {
   align-items: baseline;
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
   justify-content: space-between;
 }
 
+/* The diagram's Mermaid source, and the file an imported item came from. */
 .source {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.source pre {
+  background: var(--well);
+  box-shadow: var(--frame-inner);
+  color: var(--fg);
+  margin: 8px 2px 2px;
+  overflow-x: auto;
+  padding: 8px 10px;
 }

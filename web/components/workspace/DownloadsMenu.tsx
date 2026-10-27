@@ -25,7 +25,7 @@ export function DownloadsMenu({ sessionId, sessionName, refreshKey }: Props) {
   return (
     <details className={styles.menu}>
       <summary>Downloads ({available})</summary>
-      <ul>
+      <ul className="panel">
         {items.map((item) => (
           <li key={item.kind}>
             {item.available ? (

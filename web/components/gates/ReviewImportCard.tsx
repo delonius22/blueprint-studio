@@ -186,7 +186,7 @@ export function ReviewImportCard({ args, status, respond, result }: Props) {
       })}
       {ready && (
         <div className={styles.actions}>
-          <button type="submit" className={styles.primary}>
+          <button type="submit" className="go">
             Record accepted items
           </button>
           <button

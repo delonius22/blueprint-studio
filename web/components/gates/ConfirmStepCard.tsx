@@ -63,7 +63,7 @@ export function ConfirmStepCard({ args, status, respond, result }: Props) {
       <p className={styles.summary}>{args.summary ?? "Preparing the summary…"}</p>
       {status === "executing" && respond && !rejecting && (
         <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={() => respond({ approved: true })}>
+          <button type="button" className="go" onClick={() => respond({ approved: true })}>
             Approve step {step}
           </button>
           <button type="button" onClick={() => setRejecting(true)}>

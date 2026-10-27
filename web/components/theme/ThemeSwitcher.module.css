@@ -1,0 +1,23 @@
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.option {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.option[aria-pressed="true"] {
+  background: var(--selected-bg);
+  box-shadow: var(--frame-selected);
+  color: var(--selected-fg);
+}
+
+.icon {
+  shape-rendering: crispEdges;
+}

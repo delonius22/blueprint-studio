@@ -6,7 +6,7 @@ import styles from "./GapRegister.module.css";
 export function GapRegister({ gaps, design, stage }: { gaps: Gap[]; design: Design; stage: string }) {
   const open = gaps.filter((g) => g.status === "open").length;
   return (
-    <section className={styles.register} aria-labelledby="gap-register-title">
+    <section className={`panel ${styles.register}`} aria-labelledby="gap-register-title">
       <h2 id="gap-register-title">Gap register</h2>
       {stage === "design_review" && gaps.length === 0 ? (
         <p aria-live="polite">The design judges are reviewing the design for security, efficiency and maintainability…</p>

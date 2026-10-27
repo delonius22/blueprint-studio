@@ -1,44 +1,45 @@
 .viewer {
   max-width: 60rem;
-  padding: 1rem 1.25rem 2rem;
+  padding: 16px 20px 24px;
 }
 
 .top {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+  gap: 8px 16px;
   justify-content: space-between;
 }
 
 .viewer h2 {
-  font-size: 1.2rem;
+  font-size: 22px;
   margin: 0;
 }
 
 .viewer h3 {
   border-bottom: 1px solid var(--border);
-  font-size: 1rem;
-  margin: 1.2rem 0 0.4rem;
-  padding-bottom: 0.2rem;
+  font-size: 17px;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
 }
 
 .viewer h4 {
-  font-size: 0.95rem;
-  margin: 0.5rem 0 0.2rem;
+  font-size: 15px;
+  margin: 10px 0 4px;
 }
 
 .viewer p {
-  margin: 0.3rem 0;
+  margin: 6px 0;
+  max-width: 72ch;
 }
 
 .muted {
   color: var(--muted);
-  font-size: 0.9rem;
 }
 
 .switcher {
-  font-size: 0.9rem;
+  font-family: var(--font-label);
+  font-size: var(--label-size);
 }
 
 .scroll {
@@ -47,18 +48,17 @@
 
 .viewer table {
   border-collapse: collapse;
-  font-size: 0.9rem;
   width: 100%;
 }
 
 .viewer th,
 .viewer td {
   border-bottom: 1px solid var(--border);
-  padding: 0.35rem 0.5rem;
+  padding: 6px 8px;
   text-align: left;
   vertical-align: top;
 }
 
 .feature {
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }

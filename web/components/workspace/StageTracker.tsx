@@ -21,7 +21,13 @@ export function StageTracker({ stage, currentStep, confirmedSteps }: Props) {
               aria-current={current ? "step" : undefined}
               className={confirmed ? styles.confirmed : current ? styles.current : styles.upcoming}
             >
-              <span aria-hidden="true">{confirmed ? "✓" : step}</span>
+              {confirmed ? (
+                <svg className={styles.check} width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                  <path fill="currentColor" d="M0 5h2v2H0zM2 7h2v2H2zM4 5h2v2H4zM6 3h2v2H6zM8 1h2v2H8z" />
+                </svg>
+              ) : (
+                <span aria-hidden="true">{step}</span>
+              )}
               <span className="visually-hidden">
                 Step {step}: {STEP_NAMES[step]}, {status}
               </span>
