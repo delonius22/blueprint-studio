@@ -20,6 +20,16 @@
             "title": "Name",
             "type": "string"
           },
+          "role": {
+            "description": "What the user says the file is",
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
           "size": {
             "title": "Size",
             "type": "integer"
@@ -35,6 +45,7 @@
         "required": [
           "id",
           "name",
+          "role",
           "kind",
           "media_type",
           "size",
@@ -84,6 +95,15 @@
             "title": "Name",
             "type": "string"
           },
+          "role": {
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
           "status": {
             "default": "parsed",
             "enum": [
@@ -118,6 +138,7 @@
         "required": [
           "id",
           "name",
+          "role",
           "kind"
         ],
         "title": "AttachmentRef",
@@ -2254,6 +2275,16 @@
             "title": "Name",
             "type": "string"
           },
+          "role": {
+            "description": "What the user says the file is",
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
           "size": {
             "title": "Size",
             "type": "integer"
@@ -2269,6 +2300,7 @@
         "required": [
           "id",
           "name",
+          "role",
           "kind",
           "media_type",
           "size",
@@ -2687,6 +2719,22 @@
               "title": "Name",
               "type": "string"
             }
+          },
+          {
+            "description": "A PRD, a spec or a supporting document",
+            "in": "query",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "description": "A PRD, a spec or a supporting document",
+              "enum": [
+                "prd",
+                "spec",
+                "supporting"
+              ],
+              "title": "Role",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2698,7 +2746,7 @@
               }
             }
           },
-          "description": "The file's bytes; its name is the `name` query parameter",
+          "description": "The file's bytes; its name and role are query parameters",
           "required": true
         },
         "responses": {

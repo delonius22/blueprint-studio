@@ -20,6 +20,7 @@ from typing import Any, Protocol
 from psycopg.rows import tuple_row
 from psycopg_pool import AsyncConnectionPool
 
+from blueprint.domain.models import DocumentRole
 from blueprint.imports.files import ParsedFile, Section
 
 SCHEMA = (
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     session_id TEXT NOT NULL,
     seq INTEGER NOT NULL,
     name TEXT NOT NULL,
+    role TEXT NOT NULL,
     kind TEXT NOT NULL,
     media_type TEXT NOT NULL,
     size INTEGER NOT NULL,
@@ -54,7 +56,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 COLUMNS = "id, name, stage, current_step, created_at, updated_at"
 # Removed attachments keep their row (without content), so an ATT number is never reused.
-ATTACHMENT_COLUMNS = "seq, name, kind, media_type, size, sha256, warnings"
+ATTACHMENT_COLUMNS = "seq, name, role, kind, media_type, size, sha256, warnings"
 
 
 class InvalidCursor(ValueError):
@@ -77,6 +79,7 @@ class AttachmentRow:
 
     id: str
     name: str
+    role: DocumentRole
     kind: str
     media_type: str
     size: int
@@ -100,8 +103,10 @@ def attachment_seq(attachment_id: str) -> int | None:
 
 
 def _attachment(record: Sequence[Any]) -> AttachmentRow:
-    seq, name, kind, media_type, size, sha256, warnings = record
-    return AttachmentRow(f"ATT-{seq}", name, kind, media_type, size, sha256, json.loads(warnings))
+    seq, name, role, kind, media_type, size, sha256, warnings = record
+    return AttachmentRow(
+        f"ATT-{seq}", name, role, kind, media_type, size, sha256, json.loads(warnings)
+    )
 
 
 def encode_cursor(row: SessionRow) -> str:
@@ -214,18 +219,19 @@ class SqlSessionStore:
     # --- attachments (S14.3) -----------------------------------------------------------------
 
     async def add_attachment(
-        self, session_id: str, name: str, data: bytes, parsed: ParsedFile
+        self, session_id: str, name: str, role: DocumentRole, data: bytes, parsed: ParsedFile
     ) -> AttachmentRow:
         sections = json.dumps([[s.locator, s.text] for s in parsed.sections])
         (record,) = await self.db.rows(
-            "INSERT INTO attachments (session_id, seq, name, kind, media_type, size, sha256, "
-            "warnings, sections, content) VALUES "
+            "INSERT INTO attachments (session_id, seq, name, role, kind, media_type, size, "
+            "sha256, warnings, sections, content) VALUES "
             "(?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM attachments WHERE session_id = ?), "
-            f"?, ?, ?, ?, ?, ?, ?, ?) RETURNING {ATTACHMENT_COLUMNS}",
+            f"?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING {ATTACHMENT_COLUMNS}",
             (
                 session_id,
                 session_id,
                 name,
+                role,
                 parsed.kind,
                 parsed.media_type,
                 len(data),

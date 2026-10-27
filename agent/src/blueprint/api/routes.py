@@ -14,6 +14,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from blueprint.domain.models import DocumentRole
 from blueprint.domain.state import SESSION_FIELDS, SessionState, new_session_state
 from blueprint.exports import downloads
 from blueprint.imports.files import (
@@ -133,6 +134,7 @@ class AttachmentItem(BaseModel):
 
     id: str
     name: str
+    role: DocumentRole = Field(description="What the user says the file is")
     kind: str
     media_type: str
     size: int
@@ -152,6 +154,7 @@ def attachment_item(row: AttachmentRow) -> AttachmentItem:
     return AttachmentItem(
         id=row.id,
         name=row.name,
+        role=row.role,
         kind=row.kind,
         media_type=row.media_type,
         size=row.size,
@@ -174,7 +177,7 @@ ORIGINAL_FILE: Responses = {
 UPLOAD_BODY: dict[str, Any] = {
     "requestBody": {
         "required": True,
-        "description": "The file's bytes; its name is the `name` query parameter",
+        "description": "The file's bytes; its name and role are query parameters",
         "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}},
     }
 }
@@ -313,6 +316,7 @@ def session_routes(
     async def upload_attachment(
         session_id: str,
         name: Annotated[str, Query(min_length=1, max_length=255)],
+        role: Annotated[DocumentRole, Query(description="A PRD, a spec or a supporting document")],
         request: Request,
         response: Response,
     ) -> UploadedAttachment:
@@ -332,7 +336,7 @@ def session_routes(
             parsed = read_file(name, data, vision)
         except AttachmentRejected as refused:
             raise ApiError(refused.status, refused.code, refused.message) from None
-        row = await store.add_attachment(session_id, name, data, parsed)
+        row = await store.add_attachment(session_id, name, role, data, parsed)
         return UploadedAttachment(**attachment_item(row).model_dump(), duplicate=False)
 
     @router.delete(

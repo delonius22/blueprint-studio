@@ -8,7 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
 from blueprint.config.assets import load_assets
-from blueprint.domain.models import Design
+from blueprint.domain.models import Design, DocumentRole
 from blueprint.domain.state import new_session_state
 from blueprint.graph.build import build_graph
 from blueprint.imports.files import read_file
@@ -24,12 +24,15 @@ class MemoryFiles:
     def __init__(self) -> None:
         self.files: dict[str, list[StoredAttachment | None]] = {}
 
-    def add(self, session_id: str, name: str, data: bytes) -> AttachmentRow:
+    def add(
+        self, session_id: str, name: str, data: bytes, role: DocumentRole = "prd"
+    ) -> AttachmentRow:
         files = self.files.setdefault(session_id, [])
         parsed = read_file(name, data, vision=True)
         row = AttachmentRow(
             f"ATT-{len(files) + 1}",
             name,
+            role,
             parsed.kind,
             parsed.media_type,
             len(data),

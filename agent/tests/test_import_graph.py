@@ -103,7 +103,9 @@ async def test_staged_items_are_offered_when_their_step_opens() -> None:
     }  # fmt: skip
     initial = at_step(2) | {
         "import_queue": [staged],
-        "attachments": [{"id": "ATT-1", "name": "brief.md", "kind": "text", "status": "imported"}],
+        "attachments": [
+            {"id": "ATT-1", "name": "brief.md", "role": "prd", "kind": "text", "status": "imported"}
+        ],
     }
     seam = GraphSeam(
         ScriptedChatModel.with_script(

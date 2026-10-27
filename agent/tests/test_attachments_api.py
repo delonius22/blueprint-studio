@@ -42,10 +42,12 @@ async def new_session(http: httpx.AsyncClient) -> str:
     return str((await http.post("/api/sessions", json={"name": "Shortener"})).json()["id"])
 
 
-def upload(http: httpx.AsyncClient, session_id: str, name: str, data: bytes) -> Any:
+def upload(
+    http: httpx.AsyncClient, session_id: str, name: str, data: bytes, role: str = "prd"
+) -> Any:
     return http.post(
         f"/api/sessions/{session_id}/attachments",
-        params={"name": name},
+        params={"name": name, "role": role},
         content=data,
         headers={"content-type": "application/octet-stream"},
     )
@@ -57,7 +59,8 @@ async def test_upload_list_content_and_remove(tmp_path: Path) -> None:
         created = await upload(http, sid, "brief.md", BRIEF_MD.encode())
         assert created.status_code == 201
         assert created.json() | {"size": 0} == {
-            "id": "ATT-1", "name": "brief.md", "kind": "text", "media_type": "text/markdown",
+            "id": "ATT-1", "name": "brief.md", "role": "prd", "kind": "text",
+            "media_type": "text/markdown",
             "size": 0, "warnings": [], "duplicate": False,
         }  # fmt: skip
         again = await upload(http, sid, "copy.md", BRIEF_MD.encode())
@@ -93,6 +96,22 @@ async def test_refusals(tmp_path: Path) -> None:
         for n in range(MAX_ATTACHMENTS):
             assert (await upload(http, sid, f"{n}.md", f"# {n}".encode())).status_code == 201
         assert_error(await upload(http, sid, "one-more.md", b"# more"), 409, "attachment_limit")
+
+
+async def test_every_file_needs_a_role(tmp_path: Path) -> None:
+    async with service(tmp_path / "b.db") as app, client(app) as http:
+        sid = await new_session(http)
+        no_role = await http.post(
+            f"/api/sessions/{sid}/attachments",
+            params={"name": "a.md"},
+            content=b"# a",
+            headers={"content-type": "application/octet-stream"},
+        )
+        assert_error(no_role, 422)
+        assert_error(await upload(http, sid, "a.md", b"# a", role="notes"), 422)
+        assert (await upload(http, sid, "a.md", b"# a", role="supporting")).status_code == 201
+        listing = (await http.get(f"/api/sessions/{sid}/attachments")).json()
+        assert [a["role"] for a in listing["attachments"]] == ["supporting"]
 
 
 async def test_images_are_taken_when_the_model_reads_them(tmp_path: Path) -> None:

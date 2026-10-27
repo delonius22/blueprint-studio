@@ -1,40 +1,140 @@
-.drop {
+.attach {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.attach > .hint:empty {
+  display: none;
+}
+
+.attachActions {
   align-items: center;
-  border-bottom: 1px dashed var(--border);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: 4px 12px;
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drop {
+  align-items: center;
+  background: var(--well);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  outline: 3px dashed var(--rule);
+  outline-offset: -3px;
+  padding: 10px 12px;
 }
 
 .over {
-  background: var(--surface);
-  outline: 2px solid var(--link);
+  background: var(--hover);
+  outline-color: var(--fg);
+}
+
+.drop button {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.icon {
+  shape-rendering: crispEdges;
 }
 
 .hint {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 12px;
   margin: 0;
 }
 
+.staged {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+}
+
+.roles {
+  align-items: center;
+  border: 0;
+  box-shadow: var(--frame-inner);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 2px;
+  padding: 8px 10px;
+}
+
+.roles legend {
+  background: var(--panel);
+  overflow-wrap: anywhere;
+  padding: 0 6px;
+}
+
+/* Each role is a chip; the chosen one is filled. */
+.role {
+  align-items: center;
+  box-shadow: var(--frame-tag);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  margin: 2px;
+  min-height: 28px;
+  padding: 0 10px 0 8px;
+}
+
+.role:has(input:checked) {
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+}
+
+.role:has(input:checked) input {
+  accent-color: var(--selected-fg);
+}
+
+.role:has(input:focus-visible) {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.remove {
+  margin-left: auto;
+}
+
 .sources {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin: 1rem 1.25rem 0;
-  padding: 0.75rem 1rem;
+  margin: 3px 9px 24px 3px;
+  padding: 14px 16px;
 }
 
 .sources h3 {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
+  font-size: 16px;
+  margin: 0 0 10px;
 }
 
 .sources ul {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 10px;
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.roleTag {
+  box-shadow: var(--frame-tag);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  margin: 0 6px;
+  padding: 0 5px;
 }

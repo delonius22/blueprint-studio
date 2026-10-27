@@ -26,6 +26,8 @@ Stage = Literal[
 STAGES: tuple[Stage, ...] = Stage.__args__  # type: ignore[attr-defined]
 
 Role = Literal["interview", "review"]
+# What the user says an attached file is; the importer reads it with that in mind.
+DocumentRole = Literal["prd", "spec", "supporting"]
 NonEmpty = Annotated[str, Field(min_length=1)]
 
 
@@ -419,6 +421,7 @@ class AttachmentRef(Model):
 
     id: str
     name: str
+    role: DocumentRole
     kind: str
     status: Literal["parsed", "imported", "failed", "removed"] = "parsed"
     summary: str | None = None

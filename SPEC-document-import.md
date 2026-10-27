@@ -14,6 +14,8 @@
 - **Names link new items.** A flow step, SPOF, relationship or foreign key may name a component or entity that is new in the same file; the applier links it to the ID once the named item is recorded.
 - **Weakness notes are open or asked** (no "resolved" state); `import_questions` and `import_weaknesses` are one list, `import_notes`.
 - **The card's editable fields come from the server** with their kind (a list of choices, "number" or "text").
+- **Every file has a role (asked by the user, 2026-10-27).** Before a file uploads, the user marks it as a PRD, a spec or a supporting document. `role` is a required query parameter (`prd`, `spec` or `supporting`; `422` otherwise), stored with the file, shown in the sources panel, and given to the importer (whose prompt says what to expect from each kind) and to the interviewer's list of files.
+- **Files can be attached when a session is started.** The new-session form takes files with their roles and uploads them once the session exists, still in the interview stage; they are read when the user sends the first message.
 - **OQ-I6 (`read_attachment`) was not built.**
 
 ---

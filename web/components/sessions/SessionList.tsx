@@ -1,7 +1,7 @@
 "use client";
 
-// The session list (SPECS S3.2, S11.1): newest first, keyset-paginated, with create,
-// rename and delete.
+// The session list (SPECS S3.2, S11.1): newest first, keyset-paginated, with rename and
+// delete. Sessions are started from NewSessionForm.
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { ApiError, type SessionSummary, sessionsApi, stageLabel } from "../../lib/sessions";
@@ -13,12 +13,11 @@ function message(error: unknown): string {
   return error instanceof ApiError ? error.message : "Something went wrong. Please try again.";
 }
 
-export function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
+export function SessionList() {
   const [items, setItems] = useState<SessionSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(async (cursor: string | null) => {
@@ -38,17 +37,6 @@ export function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
   useEffect(() => {
     void load(null);
   }, [load]);
-
-  async function create(event: FormEvent) {
-    event.preventDefault();
-    try {
-      const session = await sessionsApi.create(newName);
-      setNewName("");
-      onOpen(session.id);
-    } catch (caught) {
-      setError(message(caught));
-    }
-  }
 
   async function rename(event: FormEvent) {
     event.preventDefault();
@@ -74,28 +62,14 @@ export function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
   }
 
   return (
-    <div className={styles.list}>
-      <form className={styles.create} onSubmit={create}>
-        <label htmlFor="new-session-name">Session name</label>
-        <input
-          id="new-session-name"
-          value={newName}
-          maxLength={120}
-          required
-          onChange={(event) => setNewName(event.target.value)}
-          placeholder="e.g. URL shortener"
-        />
-        <button type="submit">New session</button>
-      </form>
-
+    <section className={styles.list} aria-labelledby="sessions-heading">
+      <h2 id="sessions-heading">Your sessions</h2>
       {error && (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-
-      <h2 id="sessions-heading">Your sessions</h2>
-      {!loading && items.length === 0 && !error && <p>No sessions yet. Name one above to start.</p>}
+      {!loading && items.length === 0 && !error && <p className={styles.stage}>No sessions yet.</p>}
       <ul aria-labelledby="sessions-heading" className={styles.items}>
         {items.map((session) => (
           <li key={session.id} className={styles.item}>
@@ -151,6 +125,6 @@ export function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
           {loading ? "Loading…" : "Load more"}
         </button>
       )}
-    </div>
+    </section>
   );
 }

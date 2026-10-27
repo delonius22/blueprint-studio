@@ -60,8 +60,8 @@ export const sessionsApi = {
   attachments(id: string): Promise<AttachmentListing> {
     return call(`/${encodeURIComponent(id)}/attachments`);
   },
-  attach(id: string, file: File): Promise<UploadedAttachment> {
-    const query = new URLSearchParams({ name: file.name });
+  attach(id: string, file: File, role: UploadedAttachment["role"]): Promise<UploadedAttachment> {
+    const query = new URLSearchParams({ name: file.name, role });
     return call(`/${encodeURIComponent(id)}/attachments?${query}`, { method: "POST", body: file });
   },
   detach(id: string, attachmentId: string): Promise<void> {

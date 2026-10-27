@@ -144,6 +144,12 @@ export interface components {
             media_type: string;
             /** Name */
             name: string;
+            /**
+             * Role
+             * @description What the user says the file is
+             * @enum {string}
+             */
+            role: "prd" | "spec" | "supporting";
             /** Size */
             size: number;
             /** Warnings */
@@ -170,6 +176,11 @@ export interface components {
             kind: string;
             /** Name */
             name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "prd" | "spec" | "supporting";
             /**
              * Status
              * @default parsed
@@ -985,6 +996,12 @@ export interface components {
             media_type: string;
             /** Name */
             name: string;
+            /**
+             * Role
+             * @description What the user says the file is
+             * @enum {string}
+             */
+            role: "prd" | "spec" | "supporting";
             /** Size */
             size: number;
             /** Warnings */
@@ -1248,6 +1265,8 @@ export interface operations {
         parameters: {
             query: {
                 name: string;
+                /** @description A PRD, a spec or a supporting document */
+                role: "prd" | "spec" | "supporting";
             };
             header?: never;
             path: {
@@ -1255,7 +1274,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description The file's bytes; its name is the `name` query parameter */
+        /** @description The file's bytes; its name and role are query parameters */
         requestBody: {
             content: {
                 "application/octet-stream": string;

@@ -1,7 +1,8 @@
 "use client";
 
-// The session's attached files (SPEC-document-import §5): each with what the agent made of it,
-// how much still waits for a later step, and a remove action.
+// The session's attached files (SPEC-document-import §5): each with what the user says it is,
+// what the agent made of it, how much still waits for a later step, and a remove action.
+import { roleLabel } from "../../lib/document-roles";
 import { attachmentUrl, type AttachmentListing } from "../../lib/sessions";
 import type { SessionState } from "../../lib/state";
 import styles from "./Attachments.module.css";
@@ -25,7 +26,7 @@ export function SourcesPanel({ sessionId, listing, state, canRemove, onRemove }:
   if (listing.length === 0) return null;
   const refs = new Map((state.attachments ?? []).map((a) => [a.id, a]));
   return (
-    <section className={styles.sources} aria-labelledby="sources-title">
+    <section className={`panel ${styles.sources}`} aria-labelledby="sources-title">
       <h3 id="sources-title">Attached files ({listing.length})</h3>
       <ul>
         {listing.map((file) => {
@@ -36,12 +37,13 @@ export function SourcesPanel({ sessionId, listing, state, canRemove, onRemove }:
             <li key={file.id}>
               <a href={attachmentUrl(sessionId, file.id)} target="_blank" rel="noreferrer">
                 {file.id}: {file.name}
-              </a>{" "}
+              </a>
+              <span className={styles.roleTag}>{roleLabel(file.role)}</span>
               <span className={styles.hint}>{STATUS[ref?.status ?? "parsed"]}</span>
               {ref?.summary && <div className={styles.hint}>{ref.summary}</div>}
               {steps.length > 0 && (
                 <div className={styles.hint}>
-                  {waiting.length} item{waiting.length === 1 ? "" : "s"} wait for Step{steps.length > 1 ? "s" : ""}{" "}
+                  {waiting.length === 1 ? "1 item waits" : `${waiting.length} items wait`} for Step{steps.length > 1 ? "s" : ""}{" "}
                   {steps.join(", ")}
                 </div>
               )}

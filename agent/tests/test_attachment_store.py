@@ -31,22 +31,22 @@ async def test_attachments_are_numbered_per_session_and_never_reuse_a_number(
 ) -> None:
     await store.create("s1", "One", "interview", 1)
     await store.create("s2", "Two", "interview", 1)
-    first = await store.add_attachment("s1", "brief.md", b"# Goals", PARSED)
-    second = await store.add_attachment("s1", "more.md", b"# More", PARSED)
-    other = await store.add_attachment("s2", "brief.md", b"# Goals", PARSED)
+    first = await store.add_attachment("s1", "brief.md", "prd", b"# Goals", PARSED)
+    second = await store.add_attachment("s1", "more.md", "prd", b"# More", PARSED)
+    other = await store.add_attachment("s2", "brief.md", "prd", b"# Goals", PARSED)
     assert (first.id, second.id, other.id) == ("ATT-1", "ATT-2", "ATT-1")
     assert first.size == 7 and first.warnings == ["note"] and len(first.sha256) == 64
 
     await store.remove_attachment("s1", "ATT-2")
     assert [a.id for a in await store.attachments("s1")] == ["ATT-1"]
     assert await store.attachment("s1", "ATT-2") is None
-    third = await store.add_attachment("s1", "again.md", b"# Again", PARSED)
+    third = await store.add_attachment("s1", "again.md", "prd", b"# Again", PARSED)
     assert third.id == "ATT-3"
 
 
 async def test_a_stored_attachment_keeps_its_bytes_and_sections(store: SqlSessionStore) -> None:
     await store.create("s1", "One", "interview", 1)
-    await store.add_attachment("s1", "brief.md", b"# Goals", PARSED)
+    await store.add_attachment("s1", "brief.md", "prd", b"# Goals", PARSED)
     stored = await store.attachment("s1", "ATT-1")
     assert stored is not None
     assert stored.content == b"# Goals"
@@ -56,8 +56,8 @@ async def test_a_stored_attachment_keeps_its_bytes_and_sections(store: SqlSessio
 
 async def test_deleting_a_session_deletes_its_attachments(store: SqlSessionStore) -> None:
     await store.create("s1", "One", "interview", 1)
-    await store.add_attachment("s1", "brief.md", b"# Goals", PARSED)
+    await store.add_attachment("s1", "brief.md", "prd", b"# Goals", PARSED)
     await store.delete("s1")
     assert await store.attachments("s1") == []
     await store.create("s1", "One again", "interview", 1)
-    assert (await store.add_attachment("s1", "b.md", b"x", PARSED)).id == "ATT-1"
+    assert (await store.add_attachment("s1", "b.md", "prd", b"x", PARSED)).id == "ATT-1"

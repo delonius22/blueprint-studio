@@ -133,7 +133,7 @@ npm run test:e2e        # needs Docker: builds the server stack, then runs five 
 
 The end-to-end test is in `web/e2e/smoke.spec.ts`:
 - **What it runs:** five concurrent sessions, each from creating the session to downloading the zip.
-- **Accessibility:** it scans the pages for WCAG 2.1 AA in light and dark themes.
+- **Accessibility:** it scans the pages for WCAG 2.1 AA in all three themes (Day, Night and Contrast).
 - **Reusing a running stack:** set `E2E_REUSE_STACK=1` to use a stack that's already up.
 
 ## Design documents

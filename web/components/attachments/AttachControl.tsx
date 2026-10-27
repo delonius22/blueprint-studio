@@ -1,10 +1,12 @@
 "use client";
 
-// Attaching files to the interview (SPEC-document-import §5): a button and a drop zone that
-// upload each file, then hand the new ones to the workspace so the agent reads them.
-import { type DragEvent, useRef, useState } from "react";
-import { ApiError, sessionsApi, type UploadedAttachment } from "../../lib/sessions";
+// Attaching files to the interview (SPEC-document-import §5): the user chooses files, says what
+// each one is, and attaches them; the workspace then hands the new ones to the agent.
+import { useState } from "react";
+import type { UploadedAttachment } from "../../lib/sessions";
 import styles from "./Attachments.module.css";
+import { FilePicker, type StagedFile, allLabelled } from "./FilePicker";
+import { uploadStaged } from "./upload";
 
 type Props = {
   sessionId: string;
@@ -14,64 +16,34 @@ type Props = {
 };
 
 export function AttachControl({ sessionId, accepts, disabled, onAttached }: Props) {
-  const input = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<StagedFile[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [over, setOver] = useState(false);
   const off = disabled || busy;
+  const ready = allLabelled(files);
 
-  async function upload(files: File[]) {
-    if (off || files.length === 0) return;
+  async function attach() {
+    if (off || !ready) return;
     setBusy(true);
     setMessage(`Uploading ${files.length} file${files.length === 1 ? "" : "s"}…`);
-    const added: UploadedAttachment[] = [];
-    const problems: string[] = [];
-    for (const file of files) {
-      try {
-        const uploaded = await sessionsApi.attach(sessionId, file);
-        if (uploaded.duplicate) problems.push(`${file.name} is already attached as ${uploaded.id}`);
-        else added.push(uploaded);
-      } catch (caught) {
-        problems.push(caught instanceof ApiError ? caught.message : `${file.name} could not be uploaded`);
-      }
-    }
+    const { added, failed, problems } = await uploadStaged(sessionId, files);
     setBusy(false);
+    setFiles(failed);
     setMessage(problems.join(". "));
     if (added.length) onAttached(added);
   }
 
-  function drop(event: DragEvent) {
-    event.preventDefault();
-    setOver(false);
-    void upload(Array.from(event.dataTransfer.files));
-  }
-
   return (
-    <div
-      className={`${styles.drop} ${over && !off ? styles.over : ""}`}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={drop}
-    >
-      <button type="button" disabled={off} onClick={() => input.current?.click()}>
-        Attach files
-      </button>
-      <span className={styles.hint}>PRDs, specs, diagrams or notes; or drop them here</span>
-      <input
-        ref={input}
-        type="file"
-        multiple
-        hidden
-        accept={accepts.join(",")}
-        aria-label="Files to attach"
-        onChange={(event) => {
-          void upload(Array.from(event.target.files ?? []));
-          event.target.value = "";
-        }}
-      />
+    <div className={styles.attach}>
+      <FilePicker accepts={accepts} disabled={off} files={files} onChange={setFiles} />
+      {files.length > 0 && (
+        <div className={styles.attachActions}>
+          <button type="button" className="go" disabled={off || !ready} onClick={() => void attach()}>
+            Attach {files.length} file{files.length === 1 ? "" : "s"}
+          </button>
+          {!ready && <span className={styles.hint}>Choose PRD, Spec or Supporting for each file first.</span>}
+        </div>
+      )}
       <p role="status" className={styles.hint}>
         {message}
       </p>

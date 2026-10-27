@@ -77,7 +77,7 @@ Blueprint Studio is a web app in which a user designs a system together with an 
 | FR-27 | F-6 | When the tickets are approved, the session shows a completion view listing every document, each downloadable alone or all together as one zip. |
 | FR-28 | F-6 | Exports are deterministic: rendering the same state twice produces byte-identical files of every kind. |
 | FR-29 | F-6 | Requirements.docx, UserStories.docx and context.md are rendered from session data, with no model call during export, so they cannot disagree with the PRD. |
-| FR-30 | F-8 | In the interview stage the user can attach `.md`, `.txt`, `.pdf`, `.docx`, `.mmd`, `.drawio` and image files to a session, within the published limits; images only when the interview model can read them. |
+| FR-30 | F-8 | When starting a session or in the interview stage the user can attach `.md`, `.txt`, `.pdf`, `.docx`, `.mmd`, `.drawio` and image files to a session, within the published limits; images only when the interview model can read them. The user says whether each file is a PRD, a spec or a supporting document, and the agent reads it accordingly. |
 | FR-31 | F-8 | The agent maps each attachment onto the design record as candidates, each quoting its source. A candidate that quotes text not in the file, or that does not fit its list's schema, is discarded. |
 | FR-32 | F-8 | The user accepts, edits or rejects each candidate in an approval card before it is recorded; nothing from a file is recorded otherwise. |
 | FR-33 | F-8 | Candidates for a step after the current one wait until that step opens; the scope-first rule of FR-2 applies to imported items. |

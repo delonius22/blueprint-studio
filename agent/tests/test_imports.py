@@ -1,5 +1,6 @@
 """From a proposal to recorded items: grounding, staging, decisions and notes (SPEC §2.4, §2.5)."""
 
+import dataclasses
 from typing import Any
 
 from blueprint.domain.models import (
@@ -16,6 +17,7 @@ from blueprint.imports.proposal import (
     apply_decisions,
     import_decisions,
     imported_material,
+    importer_messages,
     mark_asked,
     offer,
     read_proposal,
@@ -26,7 +28,7 @@ from blueprint.imports.proposal import (
 from blueprint.interview.tools import Draft, bound_tool_names
 from blueprint.storage.sessions import AttachmentRow, StoredAttachment
 
-ROW = AttachmentRow("ATT-1", "prd.md", "text", "text/markdown", 10, "0" * 64, [])
+ROW = AttachmentRow("ATT-1", "prd.md", "prd", "text", "text/markdown", 10, "0" * 64, [])
 FILE = StoredAttachment(
     ROW,
     b"",
@@ -250,7 +252,7 @@ def test_the_card_shows_offered_candidates_with_their_editable_fields_and_the_it
         ),
         candidate("IMP-2", 4, "upsert_spof", {"component_id": "CMP-1", "risk": "x"}),
     ]
-    refs = [AttachmentRef(id="ATT-1", name="prd.md", kind="text")]
+    refs = [AttachmentRef(id="ATT-1", name="prd.md", role="prd", kind="text")]
     (shown,) = review_import_args(offer(queue, 3), refs, design)["candidates"]
     assert shown["file"] == "prd.md" and shown["current"]["responsibility"] == "Old"
     assert list(shown["editable"]) == ["name", "kind", "responsibility"]
@@ -270,11 +272,13 @@ def test_notes_are_raised_once_their_step_is_reached() -> None:
         ImportNote(attachment_id="ATT-1", step=3, code="question", detail="Which cache?", quote=""),
     ]
     refs = [
-        AttachmentRef(id="ATT-1", name="prd.md", kind="text", status="imported", summary="A PRD.")
+        AttachmentRef(
+            id="ATT-1", name="prd.md", role="prd", kind="text", status="imported", summary="A PRD."
+        )
     ]
     text = imported_material(refs, notes, current_step=1)
     assert text is not None
-    assert "- ATT-1: prd.md (imported). A PRD." in text
+    assert "- ATT-1: prd.md, a PRD (imported). A PRD." in text
     assert '- NFR-1 [missing_unit] no unit (the file says: "fast")' in text
     assert "Which cache?" not in text
     asked = mark_asked(notes, 1)
@@ -284,9 +288,13 @@ def test_notes_are_raised_once_their_step_is_reached() -> None:
 
 
 def test_sync_adds_new_uploads_and_drops_what_waits_on_a_removed_file() -> None:
-    row2 = AttachmentRow("ATT-2", "arch.png", "image", "image/png", 5, "1" * 64, ["w"])
+    row2 = AttachmentRow(
+        "ATT-2", "arch.png", "supporting", "image", "image/png", 5, "1" * 64, ["w"]
+    )
     values = {
-        "attachments": [{"id": "ATT-1", "name": "prd.md", "kind": "text", "status": "imported"}],
+        "attachments": [
+            {"id": "ATT-1", "name": "prd.md", "role": "prd", "kind": "text", "status": "imported"}
+        ],
         "import_queue": [candidate("IMP-1", 3, "upsert_component", {}).model_dump(mode="json")],
     }
     update = sync_attachments(values, [row2])
@@ -295,4 +303,12 @@ def test_sync_adds_new_uploads_and_drops_what_waits_on_a_removed_file() -> None:
         ("ATT-2", "parsed"),
     ]
     assert update["attachments"][1]["warnings"] == ["w"] and update["import_queue"] == []
+    assert update["attachments"][1]["role"] == "supporting"
     assert sync_attachments(update, [row2]) == {}
+
+
+def test_the_importer_is_told_what_the_user_says_the_file_is() -> None:
+    spec = StoredAttachment(dataclasses.replace(ROW, role="spec"), b"", FILE.sections)
+    for stored, said in [(FILE, "a PRD"), (spec, "a technical spec")]:
+        _, human = importer_messages("Read the file.", stored, "Nothing yet.", 1)
+        assert f"The user says it is {said}." in str(human.content)

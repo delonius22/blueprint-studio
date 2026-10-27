@@ -5,6 +5,7 @@
 import { useAgent, useCopilotKit, useRenderTool } from "@copilotkit/react-core/v2";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AGENT_NAME } from "../../lib/constants";
+import { roleLabel } from "../../lib/document-roles";
 import { clearErrorForNewTurn } from "../../lib/errors";
 import { type AttachmentListing, sessionsApi, type UploadedAttachment } from "../../lib/sessions";
 import type { SessionState } from "../../lib/state";
@@ -99,7 +100,7 @@ export function useAttachments(sessionId: string, refreshKey: string) {
 
   async function attached(files: UploadedAttachment[]) {
     refresh();
-    const names = files.map((f) => `${f.name} (${f.id})`).join(", ");
+    const names = files.map((f) => `${f.name} (${f.id}, ${roleLabel(f.role)})`).join(", ");
     agent.addMessage({ id: crypto.randomUUID(), role: "user", content: `Attached ${names}.` });
     await copilotkit.runAgent({ agent });
   }
