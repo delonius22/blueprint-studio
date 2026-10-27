@@ -15,9 +15,9 @@ from psycopg_pool import AsyncConnectionPool
 from seam import GraphSeam
 from service import build_service, client
 
-from blueprint.domain import Design, Gap, NfrTarget, Note, PrdDoc, Requirement
-from blueprint.downloads import render
-from blueprint.state import SessionState, new_session_state
+from blueprint.domain.models import Design, Gap, NfrTarget, Note, PrdDoc, Requirement
+from blueprint.domain.state import SessionState, new_session_state
+from blueprint.exports.downloads import render
 
 DESIGN = Design(
     functional_requirements=[
@@ -166,7 +166,7 @@ def signed_off_state(**extra: Any) -> SessionState:
     out = prd_out(
         {"Short links": ["FR-1", "FR-2"], "Link owners": ["FR-3"]}, {"GAP-1": ["Short links"]}
     )
-    from blueprint.prd import PrdDraftOut, build_prd
+    from blueprint.planning.prd import PrdDraftOut, build_prd
 
     doc = build_prd(PrdDraftOut.model_validate(out), DESIGN, [GAPS[0]], {})
     state = new_session_state("s", 1000, True) | {

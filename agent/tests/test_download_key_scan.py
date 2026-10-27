@@ -10,7 +10,7 @@ import zipfile
 from conftest import INTERVIEW_KEY, REVIEW_KEY
 from fixtures import complete_state
 
-from blueprint.downloads import RENDERERS, render, unmet
+from blueprint.exports.downloads import RENDERERS, render, unmet
 
 
 def contents(data: bytes) -> list[bytes]:

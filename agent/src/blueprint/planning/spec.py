@@ -11,10 +11,8 @@ from collections.abc import Sequence
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import Field, ValidationError
 
-from blueprint.assets import Assets
-from blueprint.changes import change_problem
-from blueprint.design import issue_id
-from blueprint.domain import (
+from blueprint.config.assets import Assets
+from blueprint.domain.models import (
     SIGNED_OFF_SECTIONS,
     Design,
     Gap,
@@ -24,6 +22,8 @@ from blueprint.domain import (
     Seam,
     UserStory,
 )
+from blueprint.interview.tools import issue_id
+from blueprint.planning.changes import change_problem
 
 FRAMING = (
     "You are running the to-spec method below for Blueprint Studio. The user has already signed "

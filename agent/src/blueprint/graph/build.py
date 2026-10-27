@@ -15,17 +15,9 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from blueprint.assets import Assets
-from blueprint.changes import apply_changes
-from blueprint.design import (
-    Draft,
-    ToolFailure,
-    bound_tool_names,
-    run_tool,
-    step_blockers,
-    tool_schemas,
-)
-from blueprint.domain import (
+from blueprint.api.browser import edit_note
+from blueprint.config.assets import Assets
+from blueprint.domain.models import (
     Critique,
     Design,
     Gap,
@@ -36,8 +28,8 @@ from blueprint.domain import (
     Scorecard,
     Ticket,
 )
-from blueprint.edits import edit_note
-from blueprint.gates import (
+from blueprint.domain.state import DesignState
+from blueprint.graph.gates import (
     CONFIRM_STEP,
     DECIDE_GAPS,
     GATES,
@@ -51,9 +43,20 @@ from blueprint.gates import (
     pending_gate,
     step_approved,
 )
-from blueprint.llm import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
-from blueprint.models import RoleModels
-from blueprint.prd import (
+from blueprint.interview.prompts import critic_prompt, interviewer_prompt, transcript
+from blueprint.interview.scoring import ScorecardError, make_scorecard
+from blueprint.interview.tools import (
+    Draft,
+    ToolFailure,
+    bound_tool_names,
+    run_tool,
+    step_blockers,
+    tool_schemas,
+)
+from blueprint.llm.clients import RoleModels
+from blueprint.llm.gateway import InvalidStructuredOutput, Meter, ModelCallFailed, ModelGateway
+from blueprint.planning.changes import apply_changes
+from blueprint.planning.prd import (
     PrdDraftOut,
     build_prd,
     current_prd,
@@ -61,21 +64,7 @@ from blueprint.prd import (
     drafter_messages,
     signoff_summary,
 )
-from blueprint.prompts import critic_prompt, interviewer_prompt, transcript
-from blueprint.review import (
-    LENSES,
-    Findings,
-    GapFinding,
-    MergedGaps,
-    cited,
-    findings_payload,
-    gap_register,
-    merger_messages,
-    review_summary,
-    reviewer_messages,
-)
-from blueprint.scoring import ScorecardError, make_scorecard
-from blueprint.spec import (
+from blueprint.planning.spec import (
     SeamsOut,
     SpecOut,
     build_v1_1_draft,
@@ -86,8 +75,7 @@ from blueprint.spec import (
     spec_problems,
     synthesizer_messages,
 )
-from blueprint.state import DesignState
-from blueprint.tickets import (
+from blueprint.planning.tickets import (
     DagError,
     TicketDraft,
     TicketsOut,
@@ -95,6 +83,18 @@ from blueprint.tickets import (
     ticket_problems,
     tickets_summary,
     validate_dag,
+)
+from blueprint.review.gaps import (
+    LENSES,
+    Findings,
+    GapFinding,
+    MergedGaps,
+    cited,
+    findings_payload,
+    gap_register,
+    merger_messages,
+    review_summary,
+    reviewer_messages,
 )
 
 Graph = CompiledStateGraph[DesignState, None, DesignState, DesignState]

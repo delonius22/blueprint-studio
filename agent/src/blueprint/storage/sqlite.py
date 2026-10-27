@@ -14,7 +14,7 @@ from typing import Any
 import aiosqlite
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-from blueprint.store import COLUMNS, SessionRow, decode_cursor, split_page
+from blueprint.storage.sessions import COLUMNS, SessionRow, decode_cursor, split_page
 
 SQLITE_PREFIX = "sqlite:///"
 

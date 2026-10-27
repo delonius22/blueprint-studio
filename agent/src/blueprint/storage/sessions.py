@@ -2,7 +2,7 @@
 
 Graph state lives in the LangGraph checkpointer under thread ID = session ID
 (S4.2); this table only holds what the session list needs. This module holds the
-store interface and its Postgres implementation (server mode); ``blueprint.sqlite``
+store interface and its Postgres implementation (server mode); ``blueprint.storage.sqlite``
 holds the SQLite one (local mode).
 """
 

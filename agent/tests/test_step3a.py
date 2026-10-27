@@ -7,7 +7,7 @@ from fakes import ScriptedChatModel
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from seam import GraphSeam, at_step
 
-from blueprint.domain import Component, Flow, FlowStep
+from blueprint.domain.models import Component, Flow, FlowStep
 
 
 def calls(*entries: tuple[str, dict[str, object]]) -> AIMessage:

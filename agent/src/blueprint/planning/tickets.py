@@ -13,8 +13,8 @@ from collections.abc import Sequence
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import Field
 
-from blueprint.assets import Assets
-from blueprint.domain import Model, PrdDoc, Ticket
+from blueprint.config.assets import Assets
+from blueprint.domain.models import Model, PrdDoc, Ticket
 
 GAP_NOTE = re.compile(r"^GAP-\d+:")
 

@@ -25,11 +25,11 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from blueprint import downloads
-from blueprint.edits import apply_browser_write
-from blueprint.gates import OPEN_GATE_EVENT
-from blueprint.state import SESSION_FIELDS, SessionState, new_session_state
-from blueprint.store import InvalidCursor, SessionRow, SessionStore
+from blueprint.api.browser import apply_browser_write
+from blueprint.domain.state import SESSION_FIELDS, SessionState, new_session_state
+from blueprint.exports import downloads
+from blueprint.graph.gates import OPEN_GATE_EVENT
+from blueprint.storage.sessions import InvalidCursor, SessionRow, SessionStore
 
 AGENT_NAME = "blueprint"
 

@@ -11,8 +11,8 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 from service import build_service, client, event_types, post_run, run_input, streamed_text, user
 
-from blueprint.domain import STAGES, Design
-from blueprint.state import SESSION_FIELDS, DesignState
+from blueprint.domain.models import STAGES, Design
+from blueprint.domain.state import SESSION_FIELDS, DesignState
 
 S2_2_FIELDS = {
     "session_id", "stage", "current_step", "confirmed_steps", "design", "agent_design",
@@ -262,11 +262,11 @@ async def test_openapi_describes_every_route_with_typed_models(
 async def test_checked_in_rest_contract_matches_the_service(pool: AsyncConnectionPool[Any]) -> None:
     from conftest import REPO_ROOT
 
-    from blueprint.openapi import rest_document
+    from blueprint.api.openapi import rest_document
 
     exported = rest_document()
     checked_in = json.loads((REPO_ROOT / "web" / "openapi.json").read_text())
-    assert checked_in == exported, "run: uv run python -m blueprint.openapi > ../web/openapi.json"
+    assert checked_in == exported, "run: uv run python -m blueprint.api.openapi > ../web/openapi.json"
 
     app = await build_service(pool)
     async with client(app) as http:
@@ -277,6 +277,6 @@ async def test_checked_in_rest_contract_matches_the_service(pool: AsyncConnectio
 
 
 def test_session_state_model_matches_design_state() -> None:
-    from blueprint.state import SessionState
+    from blueprint.domain.state import SessionState
 
     assert set(SessionState.model_fields) == set(SESSION_FIELDS)

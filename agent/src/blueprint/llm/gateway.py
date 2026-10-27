@@ -13,7 +13,7 @@
   LangSmith traces the call.
 
 Provider errors are recognised by their shape (``status_code``, ``response``,
-timeout class names) so that only ``blueprint.models`` imports the OpenAI SDK.
+timeout class names) so that only ``blueprint.llm.clients`` imports the OpenAI SDK.
 """
 
 import asyncio
@@ -35,9 +35,9 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables.config import get_async_callback_manager_for_config
 from pydantic import BaseModel
 
-from blueprint.domain import ErrorInfo
-from blueprint.log import log_event
-from blueprint.models import (
+from blueprint.config.settings import Role
+from blueprint.domain.models import ErrorInfo
+from blueprint.llm.clients import (
     STRUCTURED_METHODS,
     ChatModel,
     RoleModels,
@@ -46,7 +46,7 @@ from blueprint.models import (
     structured_request,
     structured_value,
 )
-from blueprint.settings import Role
+from blueprint.utils.log import log_event
 
 MAX_RETRIES = 3
 BASE_DELAY_S = 1.0

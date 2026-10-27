@@ -15,15 +15,15 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 from psycopg_pool import AsyncConnectionPool
 
-from blueprint.api import AGENT_NAME, SessionAgent, install_error_handlers, session_routes
-from blueprint.assets import Assets, load_assets
-from blueprint.capability import check_models
-from blueprint.graph import build_graph
-from blueprint.log import log_event
-from blueprint.models import RoleModels, build_models, review_model_distinct
-from blueprint.openapi import TITLE, VERSION
-from blueprint.settings import Settings, load_settings
-from blueprint.store import PostgresSessionStore, SessionStore
+from blueprint.api.openapi import TITLE, VERSION
+from blueprint.api.routes import AGENT_NAME, SessionAgent, install_error_handlers, session_routes
+from blueprint.config.assets import Assets, load_assets
+from blueprint.config.settings import Settings, load_settings
+from blueprint.graph.build import build_graph
+from blueprint.llm.capability import check_models
+from blueprint.llm.clients import RoleModels, build_models, review_model_distinct
+from blueprint.storage.sessions import PostgresSessionStore, SessionStore
+from blueprint.utils.log import log_event
 
 
 @dataclass(frozen=True)

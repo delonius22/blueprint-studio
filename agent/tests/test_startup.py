@@ -13,10 +13,10 @@ from conftest import APP_ASSETS, INTERVIEW_KEY, REVIEW_KEY, valid_env
 from fakes import ScriptedChatModel, tool_call
 
 from blueprint.app import prepare
-from blueprint.assets import ASSET_FILES, AssetError
-from blueprint.capability import CapabilityError, check_models
-from blueprint.models import RoleModels
-from blueprint.settings import ConfigError, Settings, load_settings
+from blueprint.config.assets import ASSET_FILES, AssetError
+from blueprint.config.settings import ConfigError, Settings, load_settings
+from blueprint.llm.capability import CapabilityError, check_models
+from blueprint.llm.clients import RoleModels
 
 REQUIRED = [
     "MODEL_BASE_URL",

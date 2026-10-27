@@ -10,8 +10,9 @@ import asyncio
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
-from blueprint.errors import StartupError
-from blueprint.models import (
+from blueprint.config.errors import StartupError
+from blueprint.config.settings import Role, RoleConfig, Settings
+from blueprint.llm.clients import (
     ROLES,
     STRUCTURED_METHODS,
     ChatModel,
@@ -20,7 +21,6 @@ from blueprint.models import (
     structured_request,
     structured_value,
 )
-from blueprint.settings import Role, RoleConfig, Settings
 
 
 class CapabilityError(StartupError):

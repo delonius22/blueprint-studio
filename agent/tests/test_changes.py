@@ -11,11 +11,11 @@ from seam import GraphSeam
 from test_prd import signed_off_state
 from test_spec import SPEC, story
 
-from blueprint.changes import apply_changes, change_problem
-from blueprint.domain import PrdDoc, ProposedChange
-from blueprint.downloads import render
-from blueprint.prd import current_prd
-from blueprint.state import SessionState
+from blueprint.domain.models import PrdDoc, ProposedChange
+from blueprint.domain.state import SessionState
+from blueprint.exports.downloads import render
+from blueprint.planning.changes import apply_changes, change_problem
+from blueprint.planning.prd import current_prd
 
 
 def v11_state(changes: list[dict[str, Any]]) -> dict[str, Any]:

@@ -8,7 +8,7 @@ same source; both are checked against ``agent/tests/expected/diagrams/``.
 
 import re
 
-from blueprint.domain import Component, Design, Entity, Flow
+from blueprint.domain.models import Component, Design, Entity, Flow
 
 # Opening and closing delimiters of each component kind's node shape.
 SHAPES: dict[str, tuple[str, str]] = {

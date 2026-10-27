@@ -11,11 +11,11 @@ from seam import GraphSeam
 from service import post_run, run_input
 
 from blueprint.app import create_app
-from blueprint.assets import load_assets
-from blueprint.domain import Design, Note, Requirement
-from blueprint.graph import build_graph
-from blueprint.models import RoleModels
-from blueprint.state import new_session_state
+from blueprint.config.assets import load_assets
+from blueprint.domain.models import Design, Note, Requirement
+from blueprint.domain.state import new_session_state
+from blueprint.graph.build import build_graph
+from blueprint.llm.clients import RoleModels
 
 START_DESIGN = Design(
     functional_requirements=[Requirement(id="FR-1", statement="Shorten URLs")],

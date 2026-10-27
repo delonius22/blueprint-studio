@@ -15,9 +15,9 @@ from typing import Any
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
-from blueprint.assets import Assets
-from blueprint.design import all_item_ids, issue_id
-from blueprint.domain import Design, Gap, Lens, Model, Severity
+from blueprint.config.assets import Assets
+from blueprint.domain.models import Design, Gap, Lens, Model, Severity
+from blueprint.interview.tools import all_item_ids, issue_id
 
 LENSES: tuple[Lens, ...] = ("security", "efficiency", "maintainability")
 SEVERITY_RANK: dict[str, int] = {"high": 0, "medium": 1, "low": 2}

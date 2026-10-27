@@ -7,8 +7,8 @@ from fakes import RoutedChatModel, ScriptedChatModel, prd_out
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from seam import GraphSeam
 
-from blueprint.domain import Component, Design, Endpoint, NfrTarget, Requirement
-from blueprint.review import GapFinding, combine, gap_register, held_to_inputs
+from blueprint.domain.models import Component, Design, Endpoint, NfrTarget, Requirement
+from blueprint.review.gaps import GapFinding, combine, gap_register, held_to_inputs
 
 DESIGN = Design(
     functional_requirements=[Requirement(id="FR-1", statement="Users shorten URLs")],
@@ -241,10 +241,10 @@ async def test_the_parallel_review_runs_through_the_agent_endpoint() -> None:
     from service import event_types, post_run, run_input
 
     from blueprint.app import create_app
-    from blueprint.assets import load_assets
-    from blueprint.graph import build_graph
-    from blueprint.models import RoleModels
-    from blueprint.state import new_session_state
+    from blueprint.config.assets import load_assets
+    from blueprint.domain.state import new_session_state
+    from blueprint.graph.build import build_graph
+    from blueprint.llm.clients import RoleModels
 
     review = judge({"security": [finding("security", ["EP-1"], "No auth")]})
     graph = build_graph(RoleModels(ScriptedChatModel(), review), InMemorySaver(), load_assets())

@@ -18,7 +18,7 @@ import openai
 from langchain_core.messages import AIMessage, BaseMessage, convert_to_messages
 from pydantic import BaseModel
 
-from blueprint.models import ChatModel
+from blueprint.llm.clients import ChatModel
 
 ScriptEntry = AIMessage | dict[str, Any] | Exception
 

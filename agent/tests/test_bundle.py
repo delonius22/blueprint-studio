@@ -16,11 +16,11 @@ from fixtures import STORIES, complete_state
 from psycopg_pool import AsyncConnectionPool
 from service import build_service, client
 
-from blueprint import log
-from blueprint.changes import apply_changes
-from blueprint.domain import ProposedChange, Ticket
-from blueprint.downloads import KINDS, render, unmet
-from blueprint.state import SessionState
+from blueprint.domain.models import ProposedChange, Ticket
+from blueprint.domain.state import SessionState
+from blueprint.exports.downloads import KINDS, render, unmet
+from blueprint.planning.changes import apply_changes
+from blueprint.utils import log
 
 NAME = "URL shortener"
 
@@ -92,8 +92,8 @@ def test_renders_are_identical_across_processes() -> None:
     state = json.dumps(with_v1_2().model_dump(mode="json"))
     script = (
         "import hashlib, json, sys\n"
-        "from blueprint.downloads import KINDS, render\n"
-        "from blueprint.state import SessionState\n"
+        "from blueprint.exports.downloads import KINDS, render\n"
+        "from blueprint.domain.state import SessionState\n"
         "state = SessionState.model_validate(json.loads(sys.stdin.read()))\n"
         "print(json.dumps({k: hashlib.sha256(render(state, k, 'URL shortener')).hexdigest() for k in KINDS}))\n"
     )

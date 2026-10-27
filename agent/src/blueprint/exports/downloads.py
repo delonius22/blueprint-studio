@@ -7,13 +7,13 @@ no model call (S10.1). Availability is decided here, never in the browser.
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from blueprint.diagrams import all_diagrams
+from blueprint.domain.state import SessionState
 from blueprint.exports.bundle_zip import render_bundle
 from blueprint.exports.context_md import render_context
 from blueprint.exports.delivery_docx import render_requirements, render_user_stories
+from blueprint.exports.diagrams import all_diagrams
 from blueprint.exports.diagrams_md import render_diagrams
 from blueprint.exports.prd_docx import render_prd
-from blueprint.state import SessionState
 
 Renderer = Callable[[SessionState, str], bytes]
 

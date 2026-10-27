@@ -11,11 +11,11 @@ from seam import GraphSeam, at_step
 from service import post_run, run_input, user
 
 from blueprint.app import create_app
-from blueprint.assets import load_assets
-from blueprint.domain import CachePolicy, CapStance, Design, FailureMode
-from blueprint.graph import build_graph
-from blueprint.models import RoleModels
-from blueprint.state import new_session_state
+from blueprint.config.assets import load_assets
+from blueprint.domain.models import CachePolicy, CapStance, Design, FailureMode
+from blueprint.domain.state import new_session_state
+from blueprint.graph.build import build_graph
+from blueprint.llm.clients import RoleModels
 
 CONFIRM_STEP = {
     "name": "confirm_step",

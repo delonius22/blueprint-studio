@@ -11,9 +11,9 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from blueprint.design import ID_PATTERN, violations
-from blueprint.domain import DESIGN_PREFIXES, Design
-from blueprint.state import SESSION_FIELDS
+from blueprint.domain.models import DESIGN_PREFIXES, Design
+from blueprint.domain.state import SESSION_FIELDS
+from blueprint.interview.tools import ID_PATTERN, violations
 
 EDITABLE = ("design", "id_counters")
 INVALID_EDIT = "invalid_edit"

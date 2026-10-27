@@ -7,8 +7,8 @@ the design record, and any edit note (S5.9).
 
 from typing import Any
 
-from blueprint.assets import Assets
-from blueprint.domain import Design
+from blueprint.config.assets import Assets
+from blueprint.domain.models import Design
 
 STEP_NAMES = {
     1: "Clarify Requirements",

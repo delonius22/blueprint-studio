@@ -7,8 +7,8 @@ as approved.
 
 from collections.abc import Sequence
 
-from blueprint.design import issue_id
-from blueprint.domain import Feature, PrdDoc, PrdNfr, PrdRequirement, ProposedChange
+from blueprint.domain.models import Feature, PrdDoc, PrdNfr, PrdRequirement, ProposedChange
+from blueprint.interview.tools import issue_id
 
 TEXT_LISTS = ("goals", "users", "scope", "out_of_scope")
 

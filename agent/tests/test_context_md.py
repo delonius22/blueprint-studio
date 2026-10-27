@@ -8,8 +8,8 @@ from fixtures import complete_state
 from psycopg_pool import AsyncConnectionPool
 from service import build_service, client
 
-from blueprint.domain import Gap
-from blueprint.downloads import render
+from blueprint.domain.models import Gap
+from blueprint.exports.downloads import render
 
 EXPECTED = REPO_ROOT / "agent" / "tests" / "expected" / "context.md"
 EXAMPLE = REPO_ROOT / "agent" / "tests" / "expected" / "example-context.md"

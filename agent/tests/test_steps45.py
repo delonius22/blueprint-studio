@@ -9,7 +9,7 @@ from fakes import ScriptedChatModel
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from seam import GraphSeam, at_step
 
-from blueprint.domain import (
+from blueprint.domain.models import (
     DIMENSIONS,
     Component,
     Design,
@@ -19,7 +19,7 @@ from blueprint.domain import (
     Spof,
     Tradeoff,
 )
-from blueprint.scoring import ScorecardDraft, problems
+from blueprint.interview.scoring import ScorecardDraft, problems
 
 CONFIRM_STEP = {
     "name": "confirm_step",

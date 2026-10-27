@@ -13,10 +13,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.runnables import RunnableConfig
 from pydantic import Field, ValidationError
 
-from blueprint.assets import Assets
-from blueprint.domain import DIMENSIONS, Design, DimensionScore, Model, Scorecard
-from blueprint.llm import InvalidStructuredOutput, Meter, ModelGateway
-from blueprint.prompts import design_summary
+from blueprint.config.assets import Assets
+from blueprint.domain.models import DIMENSIONS, Design, DimensionScore, Model, Scorecard
+from blueprint.interview.prompts import design_summary
+from blueprint.llm.gateway import InvalidStructuredOutput, Meter, ModelGateway
 
 # Q-10 (PRD OQ-6), answered: quote only the user's messages. "conversation" would also allow
 # the interviewer's turns; it is kept only so tests can show the check distinguishes the two.

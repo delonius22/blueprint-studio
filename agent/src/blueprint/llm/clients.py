@@ -24,12 +24,12 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.completion_usage import CompletionUsage
 from pydantic import BaseModel
 
-from blueprint.settings import Role, RoleConfig, Settings
+from blueprint.config.settings import Role, RoleConfig, Settings
 
 ROLES: tuple[Role, ...] = ("interview", "review")
 
 # Requests time out so that S13.1 can retry them; the client's own retries are off so that
-# S13.1 (blueprint.llm) is the only retry policy.
+# S13.1 (blueprint.llm.gateway) is the only retry policy.
 REQUEST_TIMEOUT_S = 120.0
 
 # S13.4: JSON-schema mode first, then tool calling.

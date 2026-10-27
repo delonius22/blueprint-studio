@@ -14,7 +14,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, create_model
 
-from blueprint.domain import (
+from blueprint.domain.models import (
     DESIGN_PREFIXES,
     CachePolicy,
     CapStance,

@@ -22,11 +22,11 @@ from service import event_types as types
 from service import post_run, run_input
 
 from blueprint.app import create_app
-from blueprint.assets import load_assets
-from blueprint.graph import build_graph
-from blueprint.llm import Meter, ModelGateway
-from blueprint.models import RoleModels
-from blueprint.state import DesignState, new_session_state
+from blueprint.config.assets import load_assets
+from blueprint.domain.state import DesignState, new_session_state
+from blueprint.graph.build import build_graph
+from blueprint.llm.clients import RoleModels
+from blueprint.llm.gateway import Meter, ModelGateway
 
 CONFIRM_STEP = {
     "name": "confirm_step",

@@ -1,6 +1,6 @@
 """Session state (SPECS S2.1, S2.2, S3.1).
 
-Values are plain JSON (see ``blueprint.domain``) so that checkpoints, AG-UI
+Values are plain JSON (see ``blueprint.domain.models``) so that checkpoints, AG-UI
 state snapshots and frontend writes share one representation.
 """
 
@@ -8,7 +8,7 @@ from typing import Any
 
 from copilotkit import CopilotKitState
 
-from blueprint.domain import (
+from blueprint.domain.models import (
     Critique,
     Design,
     ErrorInfo,

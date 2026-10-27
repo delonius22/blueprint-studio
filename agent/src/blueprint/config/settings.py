@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, SecretStr
 
-from blueprint.errors import StartupError
+from blueprint.config.errors import StartupError
 
 Role = Literal["interview", "review"]
 

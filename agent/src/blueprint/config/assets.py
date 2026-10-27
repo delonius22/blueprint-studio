@@ -9,7 +9,7 @@ from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
 
-from blueprint.errors import StartupError
+from blueprint.config.errors import StartupError
 
 ASSET_FILES = (
     "interviewer-instructions.md",

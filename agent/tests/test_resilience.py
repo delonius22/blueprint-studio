@@ -14,11 +14,11 @@ from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel
 from seam import GraphSeam
 
-from blueprint import log
 from blueprint.app import DownloadTimer, apply_tracing
-from blueprint.llm import Meter, ModelGateway, estimate_tokens
-from blueprint.models import RoleModels
-from blueprint.settings import load_settings
+from blueprint.config.settings import load_settings
+from blueprint.llm.clients import RoleModels
+from blueprint.llm.gateway import Meter, ModelGateway, estimate_tokens
+from blueprint.utils import log
 
 
 @pytest.fixture

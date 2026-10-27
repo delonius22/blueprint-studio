@@ -7,12 +7,12 @@ from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
-from blueprint.assets import load_assets
-from blueprint.domain import Design
-from blueprint.graph import build_graph
-from blueprint.llm import ModelGateway
-from blueprint.models import RoleModels
-from blueprint.state import new_session_state
+from blueprint.config.assets import load_assets
+from blueprint.domain.models import Design
+from blueprint.domain.state import new_session_state
+from blueprint.graph.build import build_graph
+from blueprint.llm.clients import RoleModels
+from blueprint.llm.gateway import ModelGateway
 
 
 class GraphSeam:

@@ -9,8 +9,8 @@ from seam import GraphSeam
 from test_prd import signed_off_state
 from test_spec import story
 
-from blueprint.domain import UserStory
-from blueprint.tickets import DagError, TicketDraft, planner_view, validate_dag
+from blueprint.domain.models import UserStory
+from blueprint.planning.tickets import DagError, TicketDraft, planner_view, validate_dag
 
 
 def ticket(

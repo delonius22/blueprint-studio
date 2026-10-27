@@ -1,7 +1,8 @@
 """PRD v1.x.docx (SPECS S10.4): the frozen PRD version, section by section."""
 
-from blueprint.diagrams import all_diagrams
-from blueprint.domain import Design, PrdVersion, ProposedChange
+from blueprint.domain.models import Design, PrdVersion, ProposedChange
+from blueprint.domain.state import SessionState
+from blueprint.exports.diagrams import all_diagrams
 from blueprint.exports.docx_util import (
     bullets,
     code_block,
@@ -10,7 +11,6 @@ from blueprint.exports.docx_util import (
     table,
     to_bytes,
 )
-from blueprint.state import SessionState
 
 ATTRIBUTION = (
     "This document was extended with the to-spec method from mattpocock-skills 1.2.3 "

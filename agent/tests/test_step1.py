@@ -9,8 +9,7 @@ from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from pydantic import ValidationError
 from seam import GraphSeam
 
-from blueprint.design import violations
-from blueprint.domain import (
+from blueprint.domain.models import (
     Component,
     Design,
     Entity,
@@ -24,6 +23,7 @@ from blueprint.domain import (
     Requirement,
     Spof,
 )
+from blueprint.interview.tools import violations
 
 ARCHITECTURE_TOOLS = {"upsert_component", "upsert_flow", "upsert_storage_choice", "upsert_endpoint"}
 

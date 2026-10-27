@@ -14,8 +14,8 @@ from collections.abc import Sequence
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import Field
 
-from blueprint.design import issue_id
-from blueprint.domain import Design, Feature, Gap, Model, PrdDoc, PrdNfr, PrdRequirement
+from blueprint.domain.models import Design, Feature, Gap, Model, PrdDoc, PrdNfr, PrdRequirement
+from blueprint.interview.tools import issue_id
 
 
 class FeatureDraft(Model):

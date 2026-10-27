@@ -10,10 +10,10 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from seam import GraphSeam
 from test_prd import DESIGN, GAPS, signed_off_state
 
-from blueprint.domain import SIGNED_OFF_SECTIONS, PrdDoc
-from blueprint.downloads import render
+from blueprint.domain.models import SIGNED_OFF_SECTIONS, PrdDoc
+from blueprint.domain.state import SessionState
+from blueprint.exports.downloads import render
 from blueprint.exports.prd_docx import ATTRIBUTION
-from blueprint.state import SessionState
 
 
 def story(feature: str, requirements: list[str], want: str = "to shorten a URL") -> dict[str, Any]:
