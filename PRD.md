@@ -42,6 +42,7 @@ Blueprint Studio is a web app in which a user designs a system together with an 
 | F-5 | Spec and ticket synthesis | FR-18 to FR-22 |
 | F-6 | Documents and Jira hand-off | FR-23 to FR-29 |
 | F-7 | Platform qualities | NFR-1 to NFR-13 |
+| F-8 | Document import | FR-30 to FR-35 |
 
 ## Functional Requirements
 
@@ -76,6 +77,12 @@ Blueprint Studio is a web app in which a user designs a system together with an 
 | FR-27 | F-6 | When the tickets are approved, the session shows a completion view listing every document, each downloadable alone or all together as one zip. |
 | FR-28 | F-6 | Exports are deterministic: rendering the same state twice produces byte-identical files of every kind. |
 | FR-29 | F-6 | Requirements.docx, UserStories.docx and context.md are rendered from session data, with no model call during export, so they cannot disagree with the PRD. |
+| FR-30 | F-8 | In the interview stage the user can attach `.md`, `.txt`, `.pdf`, `.docx`, `.mmd`, `.drawio` and image files to a session, within the published limits; images only when the interview model can read them. |
+| FR-31 | F-8 | The agent maps each attachment onto the design record as candidates, each quoting its source. A candidate that quotes text not in the file, or that does not fit its list's schema, is discarded. |
+| FR-32 | F-8 | The user accepts, edits or rejects each candidate in an approval card before it is recorded; nothing from a file is recorded otherwise. |
+| FR-33 | F-8 | Candidates for a step after the current one wait until that step opens; the scope-first rule of FR-2 applies to imported items. |
+| FR-34 | F-8 | The interviewer asks about each weakness and document-level ambiguity, quoting the document, before the user confirms the step. |
+| FR-35 | F-8 | Every recorded item that came from a file shows its source; PRD-level excerpts feed the PRD draft. |
 
 ## Non-Functional Requirements
 
@@ -170,6 +177,15 @@ Actors: **engineer** (the person using the app), **candidate** (an engineer prac
 54. **US-54** — As an engineer, I want to run several sessions at once on one instance, so that I can compare alternative designs. *(NFR-12)*
 55. **US-55** — As a maintainer, I want vendored prompt text kept verbatim with its licence and attribution, so that the project stays compliant. *(NFR-13)*
 
+**F-8 Document import**
+56. **US-56** — As a tech lead, I want to attach an existing PRD or spec, so that the interviewer starts from what I have already written instead of asking me again. *(FR-30, FR-31)*
+57. **US-57** — As an engineer, I want to attach an architecture diagram as an image, a Mermaid file or a draw.io file, so that its components and flows reach the canvas without retyping. *(FR-30, FR-31)*
+58. **US-58** — As an engineer, I want to see every item the agent pulled from a file, with the quote it came from, and accept, edit or reject each one, so that nothing reaches my design that I did not approve. *(FR-32, G3)*
+59. **US-59** — As a candidate, I want material for later steps held until I reach that step, so that I still practise scoping first. *(FR-33, FR-2)*
+60. **US-60** — As an engineer, I want the interviewer to ask about the parts of my document that are vague, unjustified or contradictory, quoting them, so that the design gets better rather than being copied as-is. *(FR-34)*
+61. **US-61** — As an engineer, I want to see which file each recorded item came from, so that I can trace it back. *(FR-35)*
+62. **US-62** — As an engineer, I want a clear reason when a file is refused (type, size, length, a model that cannot read images), so that I know what to change. *(FR-30)*
+
 ## Implementation Decisions
 
 - **D1 — Agent backend.** Python with FastAPI and a LangGraph `StateGraph`, exposed over AG-UI with `add_langgraph_fastapi_endpoint` (package `ag-ui-langgraph`) wrapping `LangGraphAGUIAgent` (package `copilotkit`).
@@ -186,6 +202,9 @@ Actors: **engineer** (the person using the app), **candidate** (an engineer prac
 - **D12 — Diagram.** Mermaid source generated deterministically from components and flows, rendered in the browser.
 - **D13 — Pinned baseline (2026-10-14).** Python 3.14 (3.15 shipped on 2026-10-09, but `ormsgpack`, required by LangGraph's checkpointer, has no cp315 wheel yet). Python packages: `langgraph` 1.2.15, `langchain` 1.4.6, `langchain-openai` 1.7.2, `langchain-anthropic` 1.7.6, `copilotkit` 0.1.96, `ag-ui-langgraph` 0.0.47, `langgraph-checkpoint-postgres` 3.1.3, `fastapi` 0.143.1, `python-docx` 1.2.0. Node 24 LTS with TypeScript 7.0.2 (supported in `next build` since Next.js 16.3), `next` 16.4.1, `@copilotkit/react-core`, `@copilotkit/react-ui` and `@copilotkit/runtime` 1.79.0, `@ag-ui/client` 1.0.2.
 - **D14 — Published REST contract.** The session and download API is described by FastAPI's generated OpenAPI 3.1 document at `/openapi.json`; the frontend's REST types are generated from it.
+
+- **D15 — Document import.** Files are read deterministically in the agent (no model) into quotable sections, stored in an `attachments` table outside the checkpoint, and mapped onto the design record by one structured call on the interview role. The table is the source of truth: each agent run starts by syncing it into state, so the browser never writes attachments.
+- **D16 — Imports reuse the interview's tools.** Accepted candidates are recorded through the same upsert tools and Step 1 restriction as the interviewer's own writes, after a new `review_import` gate.
 
 State shape (decision-rich parts only; full field list in SPECS.md §2):
 
@@ -221,7 +240,7 @@ class DesignState(CopilotKitState):
 - **NG3** — Generating a project skeleton or any application code for the designed system.
 - **NG4** — Publishing tickets to any other tracker.
 - **NG5** — Voice input, native mobile apps and billing.
-- **NG6** — Importing an existing design from an image or a whiteboard photo.
+- **NG6** — Importing an existing design from an image or a whiteboard photo. *Superseded by F-8 (2026-10-27).*
 
 ## Further Notes
 

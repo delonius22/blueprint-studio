@@ -23,12 +23,12 @@ Each of the two roles is configured by exactly three variables:
 
 ## Connecting and calling
 
-- `agent/src/blueprint/models.py` is the only module that imports the `openai` SDK.
+- `agent/src/blueprint/llm/clients.py` is the only module that imports the `openai` SDK.
   - **Clients:** it builds one `openai.AsyncOpenAI` client per role from that role's base URL and key. Each client has a 120 s timeout and the SDK's own retries switched off, so S13.1 is the only retry policy.
   - **Calls:** it makes every call with `client.chat.completions.create`. A chat reply streams, with `stream_options.include_usage`. Structured output is either `response_format` with a strict JSON schema or one forced tool call (S13.4).
   - **Messages:** the graph keeps its conversation as LangChain messages, because LangGraph and CopilotKit need that format. The module converts them to Chat Completions messages on the way out and turns replies back into `AIMessage` objects on the way in.
 - A reply's message ID is never the provider's completion ID. Some OpenAI-compatible servers reuse one completion ID, and two messages with the same ID would replace each other in state.
-- `agent/src/blueprint/llm.py` (the gateway) reports each call to LangGraph's callbacks the way a LangChain chat model reports itself. That is how the AG-UI bridge streams the interviewer's reply to the browser, and how `LANGSMITH_TRACING` traces model calls.
+- `agent/src/blueprint/llm/gateway.py` reports each call to LangGraph's callbacks the way a LangChain chat model reports itself. That is how the AG-UI bridge streams the interviewer's reply to the browser, and how `LANGSMITH_TRACING` traces model calls.
 - The review model is **distinct** when its (base URL, model name) pair differs from the interview model's. When it is not distinct, the review still runs and the workspace shows the warning in S6.6.
 
 ## Capability differences
