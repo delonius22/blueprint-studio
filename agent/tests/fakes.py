@@ -10,12 +10,12 @@ output call, or an ``Exception`` for the endpoint to fail with (see ``_failure``
 
 import json
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import httpx2
 import openai
-from langchain_core.messages import AIMessage, BaseMessage, convert_to_messages
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage, convert_to_messages
 from pydantic import BaseModel
 
 from blueprint.llm.clients import ChatModel
@@ -272,6 +272,17 @@ def _chunks(reply: AIMessage, completion_id: str, usage: dict[str, int] | None) 
 
 def tool_call(name: str, args: dict[str, Any], call_id: str = "call_1") -> AIMessage:
     return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": call_id}])
+
+
+def calls(*entries: tuple[str, dict[str, Any]], prefix: str = "c") -> AIMessage:
+    """One interviewer turn making several backend calls, with IDs ``<prefix>0``, ``<prefix>1``…"""
+    tool_calls = [{"name": n, "args": a, "id": f"{prefix}{i}"} for i, (n, a) in enumerate(entries)]
+    return AIMessage(content="", tool_calls=tool_calls)
+
+
+def results(messages: Sequence[BaseMessage]) -> list[dict[str, Any]]:
+    """The parsed results of every tool call in ``messages``."""
+    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
 
 
 def prd_out(

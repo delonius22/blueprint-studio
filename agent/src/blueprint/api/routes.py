@@ -1,22 +1,11 @@
-"""The session REST API (SPECS S3) and the agent endpoint wiring (S4.1, S4.2)."""
+"""The session REST API (SPECS S3, S10.3, S14.8); the agent endpoint is in ``api.agent``."""
 
-import json
+import hashlib
 import uuid
-from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import datetime
-from typing import Annotated, Any, Self
+from typing import Annotated, Any
 from urllib.parse import quote
 
-from ag_ui.core import (
-    CustomEvent,
-    EventType,
-    RunAgentInput,
-    RunErrorEvent,
-    ToolCallArgsEvent,
-    ToolCallEndEvent,
-    ToolCallStartEvent,
-)
-from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -25,13 +14,17 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from blueprint.api.browser import apply_browser_write
 from blueprint.domain.state import SESSION_FIELDS, SessionState, new_session_state
 from blueprint.exports import downloads
-from blueprint.graph.gates import OPEN_GATE_EVENT
-from blueprint.storage.sessions import InvalidCursor, SessionRow, SessionStore
-
-AGENT_NAME = "blueprint"
+from blueprint.imports.files import (
+    FILE_TYPES,
+    MAX_ATTACHMENTS,
+    MAX_BYTES,
+    AttachmentRejected,
+    accepted_extensions,
+    read_file,
+)
+from blueprint.storage.sessions import AttachmentRow, InvalidCursor, SessionRow, SqlSessionStore
 
 
 class ErrorDetail(BaseModel):
@@ -54,7 +47,10 @@ def error_response(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content=body.model_dump())
 
 
-def errors(*statuses: int) -> dict[int | str, dict[str, Any]]:
+Responses = dict[int | str, dict[str, Any]]
+
+
+def errors(*statuses: int) -> Responses:
     return {status: {"model": ErrorBody} for status in statuses}
 
 
@@ -121,7 +117,7 @@ class DownloadItem(BaseModel):
     reason: str | None
 
 
-FILE_RESPONSE: dict[int | str, dict[str, Any]] = {
+FILE_RESPONSE: Responses = {
     200: {
         "description": "The file, as an attachment named per SPECS S10.2",
         "content": {
@@ -130,6 +126,70 @@ FILE_RESPONSE: dict[int | str, dict[str, Any]] = {
         },
     }
 }
+
+
+class AttachmentItem(BaseModel):
+    """An attached file (SPEC-document-import §4)."""
+
+    id: str
+    name: str
+    kind: str
+    media_type: str
+    size: int
+    warnings: list[str]
+
+
+class AttachmentListing(BaseModel):
+    accepts: list[str] = Field(description="The file extensions the upload route takes now")
+    attachments: list[AttachmentItem]
+
+
+class UploadedAttachment(AttachmentItem):
+    duplicate: bool = Field(description="True when this exact file was already attached")
+
+
+def attachment_item(row: AttachmentRow) -> AttachmentItem:
+    return AttachmentItem(
+        id=row.id,
+        name=row.name,
+        kind=row.kind,
+        media_type=row.media_type,
+        size=row.size,
+        warnings=row.warnings,
+    )
+
+
+DUPLICATE_UPLOAD: Responses = {
+    200: {"model": UploadedAttachment, "description": "Already attached"}
+}
+ORIGINAL_FILE: Responses = {
+    200: {
+        "description": "The file as uploaded",
+        "content": {
+            media: {"schema": {"type": "string", "format": "binary"}}
+            for media in sorted({file_type.media_type for file_type in FILE_TYPES.values()})
+        },
+    }
+}
+UPLOAD_BODY: dict[str, Any] = {
+    "requestBody": {
+        "required": True,
+        "description": "The file's bytes; its name is the `name` query parameter",
+        "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}},
+    }
+}
+
+
+async def read_capped(request: Request, limit: int) -> bytes:
+    """The request body, refused with 413 as soon as it passes ``limit`` bytes."""
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise ApiError(413, "file_too_large", "the file is larger than 10 MB")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def content_disposition(file_name: str) -> str:
@@ -142,62 +202,13 @@ def summary(row: SessionRow) -> SessionSummary:
     return SessionSummary(**row.__dict__)
 
 
-# --- the agent endpoint with session bookkeeping --------------------------------------------
-
-
-class SessionAgent(LangGraphAGUIAgent):
-    """The `blueprint` AG-UI agent; runs only on existing sessions and records progress."""
-
-    exists: Callable[[str], Awaitable[bool]] | None = None
-    after_run: Callable[[str], Awaitable[None]] | None = None
-
-    def clone(self) -> Self:
-        copy: Self = super().clone()
-        copy.exists, copy.after_run = self.exists, self.after_run
-        return copy
-
-    async def run(self, input: RunAgentInput) -> AsyncGenerator[Any]:
-        if self.exists is not None and not await self.exists(input.thread_id):
-            yield RunErrorEvent(
-                type=EventType.RUN_ERROR, message="unknown session", code="not_found"
-            )
-            return
-        # S2.15: the browser's state is checked against the checkpoint before the graph sees it.
-        checkpoint = await self.graph.aget_state({"configurable": {"thread_id": input.thread_id}})
-        state = apply_browser_write(dict(checkpoint.values or {}), dict(input.state or {}))
-        input = input.model_copy(update={"state": state})
-        async for event in super().run(input):  # type: ignore[no-untyped-call]
-            yield event
-            if isinstance(event, CustomEvent) and event.name == OPEN_GATE_EVENT:
-                for gate_event in gate_tool_call_events(event.value):
-                    yield gate_event
-        if self.after_run is not None:
-            await self.after_run(input.thread_id)
-
-
-def gate_tool_call_events(value: dict[str, Any]) -> list[Any]:
-    """The AG-UI events that make the browser open a gate card for this tool call."""
-    call_id = value["id"]
-    return [
-        ToolCallStartEvent(
-            type=EventType.TOOL_CALL_START,
-            tool_call_id=call_id,
-            tool_call_name=value["name"],
-            parent_message_id=value.get("message_id") or call_id,
-        ),
-        ToolCallArgsEvent(
-            type=EventType.TOOL_CALL_ARGS, tool_call_id=call_id, delta=json.dumps(value["args"])
-        ),
-        ToolCallEndEvent(type=EventType.TOOL_CALL_END, tool_call_id=call_id),
-    ]
-
-
 def session_routes(
-    store: SessionStore,
+    store: SqlSessionStore,
     graph: CompiledStateGraph[Any, Any, Any, Any],
     checkpointer: BaseCheckpointSaver[Any],
     token_budget: int,
     review_model_distinct: bool,
+    vision: bool = False,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -271,6 +282,84 @@ def session_routes(
             content=body,
             media_type=spec.media_type,
             headers={"content-disposition": content_disposition(spec.file_name(row.name))},
+        )
+
+    async def interviewing(session_id: str) -> None:
+        """Files are attached and removed only while the interview runs (SPEC §2.1)."""
+        await existing(session_id)
+        stage = (await session_state(session_id)).stage
+        if stage != "interview":
+            raise ApiError(
+                409, "wrong_stage", f"files can only be changed in the interview, not {stage}"
+            )
+
+    @router.get(
+        "/{session_id}/attachments", response_model=AttachmentListing, responses=errors(404, 422)
+    )
+    async def list_attachments(session_id: str) -> AttachmentListing:
+        await existing(session_id)
+        rows = await store.attachments(session_id)
+        return AttachmentListing(
+            accepts=accepted_extensions(vision), attachments=[attachment_item(r) for r in rows]
+        )
+
+    @router.post(
+        "/{session_id}/attachments",
+        status_code=201,
+        response_model=UploadedAttachment,
+        responses=DUPLICATE_UPLOAD | errors(404, 409, 413, 415, 422),
+        openapi_extra=UPLOAD_BODY,
+    )
+    async def upload_attachment(
+        session_id: str,
+        name: Annotated[str, Query(min_length=1, max_length=255)],
+        request: Request,
+        response: Response,
+    ) -> UploadedAttachment:
+        await interviewing(session_id)
+        data = await read_capped(request, MAX_BYTES)
+        rows = await store.attachments(session_id)
+        digest = hashlib.sha256(data).hexdigest()
+        same = next((r for r in rows if r.sha256 == digest), None)
+        if same is not None:
+            response.status_code = 200
+            return UploadedAttachment(**attachment_item(same).model_dump(), duplicate=True)
+        if len(rows) >= MAX_ATTACHMENTS:
+            raise ApiError(
+                409, "attachment_limit", f"a session takes at most {MAX_ATTACHMENTS} files"
+            )
+        try:
+            parsed = read_file(name, data, vision)
+        except AttachmentRejected as refused:
+            raise ApiError(refused.status, refused.code, refused.message) from None
+        row = await store.add_attachment(session_id, name, data, parsed)
+        return UploadedAttachment(**attachment_item(row).model_dump(), duplicate=False)
+
+    @router.delete(
+        "/{session_id}/attachments/{attachment_id}",
+        status_code=204,
+        response_class=Response,
+        responses=errors(404, 409, 422),
+    )
+    async def remove_attachment(session_id: str, attachment_id: str) -> Response:
+        await interviewing(session_id)
+        await store.remove_attachment(session_id, attachment_id)
+        return Response(status_code=204)
+
+    @router.get(
+        "/{session_id}/attachments/{attachment_id}/content",
+        response_class=Response,
+        responses=ORIGINAL_FILE | errors(404, 422),
+    )
+    async def attachment_content(session_id: str, attachment_id: str) -> Response:
+        await existing(session_id)
+        stored = await store.attachment(session_id, attachment_id)
+        if stored is None:
+            raise ApiError(404, "not_found", f"{attachment_id} is not attached to this session")
+        return Response(
+            content=stored.content,
+            media_type=stored.row.media_type,
+            headers={"content-disposition": content_disposition(stored.row.name)},
         )
 
     @router.patch("/{session_id}", response_model=SessionSummary, responses=errors(404, 422))

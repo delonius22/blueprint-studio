@@ -2,13 +2,12 @@
 
 Assembled, in order, from: the vendored interviewer instructions, the vendored
 course context, the current stage and step, a compact ID-labelled summary of
-the design record, and any edit note (S5.9).
+the design record, and any gap answers or imported material to raise.
 """
-
-from typing import Any
 
 from blueprint.config.assets import Assets
 from blueprint.domain.models import Design
+from blueprint.utils.text import number
 
 STEP_NAMES = {
     1: "Clarify Requirements",
@@ -17,10 +16,6 @@ STEP_NAMES = {
     4: "Scale, Bottlenecks and Reliability",
     5: "Trade-Offs and Extensions",
 }
-
-
-def _num(value: float) -> str:
-    return f"{value:g}"
 
 
 def design_summary(design: Design) -> str:
@@ -35,7 +30,7 @@ def design_summary(design: Design) -> str:
             [
                 f"{n.id} [{n.category}]: {n.statement}"
                 + (
-                    f" ({' '.join(p for p in (n.metric, _num(n.target) if n.target is not None else None, n.unit) if p)})"
+                    f" ({' '.join(p for p in (n.metric, number(n.target) if n.target is not None else None, n.unit) if p)})"
                     if n.metric or n.target is not None or n.unit
                     else ""
                 )
@@ -46,7 +41,7 @@ def design_summary(design: Design) -> str:
         (
             "Capacity estimates",
             [
-                f"{e.id}: {e.quantity} = {e.formula} = {_num(e.result)} {e.unit}"
+                f"{e.id}: {e.quantity} = {e.formula} = {number(e.result)} {e.unit}"
                 for e in design.capacity_estimates
             ],
         ),
@@ -176,8 +171,8 @@ def interviewer_prompt(
     stage: str,
     current_step: int,
     design: Design,
-    edit_note: str | None = None,
     gap_answers: str | None = None,
+    imported: str | None = None,
 ) -> str:
     parts = [
         assets.interviewer_instructions.rstrip("\n"),
@@ -194,10 +189,10 @@ def interviewer_prompt(
     ]
     if stage == "interview" and not any(design.model_dump().values()):
         parts.append(OPENING)
-    if edit_note:
-        parts.append("## Edits made by the user\n" + edit_note)
     if gap_answers:
         parts.append("## Gap answers to record\n" + gap_answers)
+    if imported:
+        parts.append("## Imported material\n" + imported)
     return "\n\n".join(parts)
 
 
@@ -216,16 +211,3 @@ def critic_prompt(assets: Assets, step: int, design: Design) -> str:
             "## Design record\n" + design_summary(design),
         ]
     )
-
-
-def transcript(messages: list[Any]) -> str:
-    """The conversation as plain text: user and interviewer turns only."""
-    lines: list[str] = []
-    for message in messages:
-        text = getattr(message, "text", "")
-        if not isinstance(text, str) or not text.strip():
-            continue
-        role = {"human": "User", "ai": "Interviewer"}.get(getattr(message, "type", ""))
-        if role:
-            lines.append(f"{role}: {text.strip()}")
-    return "\n\n".join(lines) if lines else "(no conversation yet)"

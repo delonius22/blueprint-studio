@@ -41,6 +41,58 @@ export interface paths {
         patch: operations["rename_session_api_sessions__session_id__patch"];
         trace?: never;
     };
+    "/api/sessions/{session_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attachments */
+        get: operations["list_attachments_api_sessions__session_id__attachments_get"];
+        put?: never;
+        /** Upload Attachment */
+        post: operations["upload_attachment_api_sessions__session_id__attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/attachments/{attachment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Attachment */
+        delete: operations["remove_attachment_api_sessions__session_id__attachments__attachment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/attachments/{attachment_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Attachment Content */
+        get: operations["attachment_content_api_sessions__session_id__attachments__attachment_id__content_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/downloads": {
         parameters: {
             query?: never;
@@ -79,6 +131,59 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AttachmentItem
+         * @description An attached file (SPEC-document-import §4).
+         */
+        AttachmentItem: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Media Type */
+            media_type: string;
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** AttachmentListing */
+        AttachmentListing: {
+            /**
+             * Accepts
+             * @description The file extensions the upload route takes now
+             */
+            accepts: string[];
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentItem"][];
+        };
+        /**
+         * AttachmentRef
+         * @description An attached file as the session knows it; the bytes stay in the attachments table.
+         */
+        AttachmentRef: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @default parsed
+             * @enum {string}
+             */
+            status: "parsed" | "imported" | "failed" | "removed";
+            /** Summary */
+            summary?: string | null;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+        };
         /** CachePolicy */
         CachePolicy: {
             /** Data */
@@ -412,6 +517,61 @@ export interface components {
              */
             status: "open" | "resolved" | "accepted";
         };
+        /**
+         * ImportCandidate
+         * @description One design item a file states, waiting for the user's decision in review_import.
+         */
+        ImportCandidate: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** Attachment Id */
+            attachment_id: string;
+            /** Id */
+            id: string;
+            source: components["schemas"]["SourceRef"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "staged" | "offered";
+            /** Step */
+            step: number;
+            /** Tool */
+            tool: string;
+            /** Updates */
+            updates?: string | null;
+            /**
+             * Weaknesses
+             * @default []
+             */
+            weaknesses: components["schemas"]["Weakness"][];
+        };
+        /**
+         * ImportNote
+         * @description A weakness of a recorded item, or a question about the file, for the interviewer.
+         */
+        ImportNote: {
+            /** Attachment Id */
+            attachment_id: string;
+            /** Code */
+            code: ("missing_target" | "missing_unit" | "unjustified_choice" | "vague" | "contradicts" | "no_failure_mode" | "ambiguous_kind") | "question";
+            /** Detail */
+            detail: string;
+            /** Item Id */
+            item_id?: string | null;
+            /** Quote */
+            quote: string;
+            /**
+             * Status
+             * @default open
+             * @enum {string}
+             */
+            status: "open" | "asked";
+            /** Step */
+            step: number;
+        };
         /** NfrTarget */
         NfrTarget: {
             /**
@@ -630,7 +790,8 @@ export interface components {
          * @description The session fields of DesignState as a typed model (S2.2), for the REST API and validation.
          */
         SessionState: {
-            agent_design: components["schemas"]["Design"] | null;
+            /** Attachments */
+            attachments?: components["schemas"]["AttachmentRef"][];
             /** Confirmed Steps */
             confirmed_steps: number[];
             /** Critiques */
@@ -644,12 +805,22 @@ export interface components {
             id_counters: {
                 [key: string]: number;
             };
+            /** Import Notes */
+            import_notes?: components["schemas"]["ImportNote"][];
+            /** Import Queue */
+            import_queue?: components["schemas"]["ImportCandidate"][];
             last_error: components["schemas"]["ErrorInfo"] | null;
+            /** Prd Context */
+            prd_context?: components["schemas"]["SourceExcerpt"][];
             prd_draft: components["schemas"]["PrdDoc"] | null;
             /** Prd Versions */
             prd_versions: components["schemas"]["PrdVersion"][];
             /** Proposed Changes */
             proposed_changes: components["schemas"]["ProposedChange"][];
+            /** Provenance */
+            provenance?: {
+                [key: string]: components["schemas"]["SourceRef"];
+            };
             /** Review Model Distinct */
             review_model_distinct: boolean;
             scorecard: components["schemas"]["Scorecard"] | null;
@@ -707,6 +878,30 @@ export interface components {
             name: string;
             /** Threshold */
             threshold?: string | null;
+        };
+        /**
+         * SourceExcerpt
+         * @description PRD-level text from a file (problem, goals, users), for the PRD drafter.
+         */
+        SourceExcerpt: {
+            source: components["schemas"]["SourceRef"];
+            /**
+             * Topic
+             * @enum {string}
+             */
+            topic: "problem" | "goals" | "users";
+        };
+        /**
+         * SourceRef
+         * @description Where an imported item came from: the attachment, a page or heading, and the quote.
+         */
+        SourceRef: {
+            /** Attachment Id */
+            attachment_id: string;
+            /** Locator */
+            locator: string;
+            /** Quote */
+            quote: string;
         };
         /** Spof */
         Spof: {
@@ -775,6 +970,26 @@ export interface components {
             /** Sacrificed */
             sacrificed: string;
         };
+        /** UploadedAttachment */
+        UploadedAttachment: {
+            /**
+             * Duplicate
+             * @description True when this exact file was already attached
+             */
+            duplicate: boolean;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Media Type */
+            media_type: string;
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+            /** Warnings */
+            warnings: string[];
+        };
         /** UserStory */
         UserStory: {
             /** Acceptance Criteria */
@@ -791,6 +1006,16 @@ export interface components {
             id: string;
             /** Requirement Ids */
             requirement_ids: string[];
+        };
+        /** Weakness */
+        Weakness: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "missing_target" | "missing_unit" | "unjustified_choice" | "vague" | "contradicts" | "no_failure_mode" | "ambiguous_kind";
+            /** Detail */
+            detail: string;
         };
     };
     responses: never;
@@ -957,6 +1182,226 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionSummary"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_attachments_api_sessions__session_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentListing"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    upload_attachment_api_sessions__session_id__attachments_post: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The file's bytes; its name is the `name` query parameter */
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Already attached */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadedAttachment"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadedAttachment"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    remove_attachment_api_sessions__session_id__attachments__attachment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    attachment_content_api_sessions__session_id__attachments__attachment_id__content_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                attachment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file as uploaded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "application/vnd.jgraph.mxfile": string;
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                    "text/markdown": string;
+                    "text/plain": string;
+                    "text/vnd.mermaid": string;
                 };
             };
             /** @description Not Found */

@@ -70,7 +70,7 @@ def at_review(
         interview or ScriptedChatModel.with_script(),
         review,
         initial={"stage": "design_review", "current_step": 5, "confirmed_steps": [1, 2, 3, 4, 5],
-                 "design": DESIGN.model_dump(mode="json"), "agent_design": DESIGN.model_dump(mode="json"),
+                 "design": DESIGN.model_dump(mode="json"),
                  "id_counters": dict(COUNTERS)} | initial,
     )  # fmt: skip
 

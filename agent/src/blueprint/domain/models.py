@@ -6,7 +6,7 @@ nodes validate into these models before using it. Every model forbids unknown
 fields (S2.7).
 """
 
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -385,3 +385,74 @@ class ErrorInfo(Model):
     code: NonEmpty
     message: NonEmpty
     retryable: bool
+
+
+# --- document import (SPEC-document-import §3) -----------------------------------------------
+
+Step = Annotated[int, Field(ge=1, le=5)]
+WeaknessCode = Literal[
+    "missing_target",
+    "missing_unit",
+    "unjustified_choice",
+    "vague",
+    "contradicts",
+    "no_failure_mode",
+    "ambiguous_kind",
+]
+
+
+class SourceRef(Model):
+    """Where an imported item came from: the attachment, a page or heading, and the quote."""
+
+    attachment_id: str
+    locator: str
+    quote: str  # verbatim from the file's text; empty for an image
+
+
+class Weakness(Model):
+    code: WeaknessCode
+    detail: NonEmpty
+
+
+class AttachmentRef(Model):
+    """An attached file as the session knows it; the bytes stay in the attachments table."""
+
+    id: str
+    name: str
+    kind: str
+    status: Literal["parsed", "imported", "failed", "removed"] = "parsed"
+    summary: str | None = None
+    warnings: list[str] = []
+
+
+class ImportCandidate(Model):
+    """One design item a file states, waiting for the user's decision in review_import."""
+
+    id: str
+    attachment_id: str
+    step: Step
+    tool: str
+    args: dict[str, Any]
+    updates: str | None = None
+    source: SourceRef
+    weaknesses: list[Weakness] = []
+    status: Literal["staged", "offered"]
+
+
+class ImportNote(Model):
+    """A weakness of a recorded item, or a question about the file, for the interviewer."""
+
+    attachment_id: str
+    step: Step
+    item_id: str | None = None
+    code: WeaknessCode | Literal["question"]
+    detail: NonEmpty
+    quote: str
+    status: Literal["open", "asked"] = "open"
+
+
+class SourceExcerpt(Model):
+    """PRD-level text from a file (problem, goals, users), for the PRD drafter."""
+
+    topic: Literal["problem", "goals", "users"]
+    source: SourceRef

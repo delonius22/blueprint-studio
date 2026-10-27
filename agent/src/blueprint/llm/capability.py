@@ -2,7 +2,8 @@
 
 Each role's model must make one trivial tool call and return one trivial
 structured output. Structured output asks for JSON-schema mode first and falls
-back once to tool calling (S13.4).
+back once to tool calling (S13.4). The interview model is also probed for image
+input, which only decides whether images may be attached (SPEC-document-import §2.6).
 """
 
 import asyncio
@@ -42,6 +43,8 @@ CALL_TIMEOUT_S = 60.0
 
 TOOL_PROMPT = "Call the Ping tool once with message 'pong'. Do not reply with text."
 STRUCTURED_PROMPT = "Reply with ok set to true."
+# A 1x1 PNG: the smallest image a vision-capable endpoint accepts.
+PROBE_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 
 def _refusal(role: Role, capability: str, config: RoleConfig, reason: str) -> CapabilityError:
@@ -68,14 +71,16 @@ async def _check_tool_calling(model: ChatModel, timeout_s: float) -> str | None:
     return None
 
 
-async def _check_structured_output(model: ChatModel, timeout_s: float) -> str | None:
+async def _check_structured_output(
+    model: ChatModel, timeout_s: float, message: HumanMessage | None = None
+) -> str | None:
     reasons: list[str] = []
     for method in STRUCTURED_METHODS:
         try:
             async with asyncio.timeout(timeout_s):
                 response = await complete(
                     model,
-                    [HumanMessage(STRUCTURED_PROMPT)],
+                    [message or HumanMessage(STRUCTURED_PROMPT)],
                     **structured_request(PingResult, method),
                 )
         except Exception as exc:
@@ -113,3 +118,15 @@ async def check_models(
     for result in results:
         if isinstance(result, BaseException):
             raise result
+
+
+async def check_vision(model: ChatModel, timeout_s: float = CALL_TIMEOUT_S) -> bool:
+    """Whether the model takes an image with a structured-output request. A failure only turns
+    image attachments off; it never stops startup."""
+    probe = HumanMessage(
+        content=[
+            {"type": "text", "text": STRUCTURED_PROMPT},
+            {"type": "image_url", "image_url": {"url": PROBE_IMAGE}},
+        ]
+    )
+    return await _check_structured_output(model, timeout_s, probe) is None

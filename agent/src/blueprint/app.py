@@ -15,14 +15,15 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 from psycopg_pool import AsyncConnectionPool
 
+from blueprint.api.agent import AGENT_NAME, SessionAgent
 from blueprint.api.openapi import TITLE, VERSION
-from blueprint.api.routes import AGENT_NAME, SessionAgent, install_error_handlers, session_routes
+from blueprint.api.routes import install_error_handlers, session_routes
 from blueprint.config.assets import Assets, load_assets
 from blueprint.config.settings import Settings, load_settings
 from blueprint.graph.build import build_graph
-from blueprint.llm.capability import check_models
+from blueprint.llm.capability import check_models, check_vision
 from blueprint.llm.clients import RoleModels, build_models, review_model_distinct
-from blueprint.storage.sessions import PostgresSessionStore, SessionStore
+from blueprint.storage.sessions import PostgresDatabase, SqlSessionStore
 from blueprint.utils.log import log_event
 
 
@@ -34,6 +35,7 @@ class Runtime:
     assets: Assets
     models: RoleModels
     review_model_distinct: bool
+    vision_supported: bool = False
 
 
 async def prepare(
@@ -41,14 +43,22 @@ async def prepare(
     *,
     assets_root: Traversable | Path | None = None,
     build: Callable[[Settings], RoleModels] = build_models,
+    vision: bool | None = None,
 ) -> Runtime:
-    """Resolve settings, assets and models, refusing to start on the first problem."""
+    """Resolve settings, assets and models, refusing to start on the first problem.
+
+    ``vision`` overrides the image probe (tests); otherwise the probe runs with the model check.
+    """
     settings = load_settings(environ)
     assets = load_assets(assets_root)
     models = build(settings)
     if not settings.skip_model_check:
         await check_models(models, settings)
-    return Runtime(settings, assets, models, review_model_distinct(settings))
+    if vision is None:
+        vision = not settings.skip_model_check and await check_vision(models.interview)
+        if not vision:
+            log_event("vision_unavailable", model=settings.interview.model_name)
+    return Runtime(settings, assets, models, review_model_distinct(settings), vision)
 
 
 def apply_tracing(settings: Settings, environ: MutableMapping[str, str]) -> None:
@@ -91,7 +101,7 @@ class DownloadTimer:
 
 
 def create_app(
-    graph: CompiledStateGraph[Any, Any, Any, Any], store: SessionStore | None = None
+    graph: CompiledStateGraph[Any, Any, Any, Any], store: SqlSessionStore | None = None
 ) -> FastAPI:
     """The agent endpoint at /agent (S4.1); with a store, runs are limited to existing sessions."""
     app = FastAPI(title=TITLE, version=VERSION)
@@ -112,7 +122,7 @@ def create_app(
             values = (await graph.aget_state({"configurable": {"thread_id": session_id}})).values
             await sessions.record_progress(session_id, values["stage"], values["current_step"])
 
-        agent.exists, agent.after_run = exists, after_run
+        agent.exists, agent.after_run, agent.attachments = exists, after_run, sessions.attachments
     add_langgraph_fastapi_endpoint(app, agent, "/agent", include_in_schema=False)
     return app
 
@@ -121,16 +131,16 @@ async def assemble(runtime: Runtime, pool: AsyncConnectionPool[Any]) -> FastAPI:
     """The full service over Postgres (server mode): checkpoints (S4.2), sessions (S3), /agent."""
     checkpointer = AsyncPostgresSaver(pool)
     await checkpointer.setup()
-    store = PostgresSessionStore(pool)
+    store = SqlSessionStore(PostgresDatabase(pool))
     await store.setup()
     return assemble_from(runtime, checkpointer, store)
 
 
 def assemble_from(
-    runtime: Runtime, checkpointer: BaseCheckpointSaver[Any], store: SessionStore
+    runtime: Runtime, checkpointer: BaseCheckpointSaver[Any], store: SqlSessionStore
 ) -> FastAPI:
     """The full service over a checkpointer and a session store that are already set up."""
-    graph = build_graph(runtime.models, checkpointer, runtime.assets)
+    graph = build_graph(runtime.models, checkpointer, runtime.assets, files=store)
     app = create_app(graph, store)
     app.state.graph = graph  # for operators' scripts and tests; the API never needs it
     app.include_router(
@@ -140,6 +150,7 @@ def assemble_from(
             checkpointer,
             runtime.settings.session_token_budget,
             runtime.review_model_distinct,
+            runtime.vision_supported,
         )
     )
     return app

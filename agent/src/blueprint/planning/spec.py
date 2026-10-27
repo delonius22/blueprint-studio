@@ -24,6 +24,7 @@ from blueprint.domain.models import (
 )
 from blueprint.interview.tools import issue_id
 from blueprint.planning.changes import change_problem
+from blueprint.utils.text import transcript
 
 FRAMING = (
     "You are running the to-spec method below for Blueprint Studio. The user has already signed "
@@ -80,15 +81,6 @@ def gap_note(gap: Gap) -> str:
     return f"{gap.id}: {gap.risk} Decision needed: {gap.decision_needed}{note}"
 
 
-def _transcript(messages: Sequence[BaseMessage]) -> str:
-    lines = []
-    for message in messages:
-        role = {"human": "User", "ai": "Interviewer"}.get(message.type)
-        if role and message.text.strip():
-            lines.append(f"{role}: {message.text.strip()}")
-    return "\n\n".join(lines) or "(no conversation)"
-
-
 def synthesizer_messages(
     assets: Assets, signed: PrdDoc, design: Design, messages: Sequence[BaseMessage]
 ) -> list[BaseMessage]:
@@ -101,7 +93,7 @@ def synthesizer_messages(
             + "\n```\n\n## Design record\n```json\n"
             + design.model_dump_json(indent=2)
             + "\n```\n\n## Conversation\n"
-            + _transcript(messages)
+            + transcript(messages)
         ),
     ]
 

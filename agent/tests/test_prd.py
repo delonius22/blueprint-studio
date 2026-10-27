@@ -68,7 +68,7 @@ def drafting(*script: Any) -> GraphSeam:
     return GraphSeam(
         ScriptedChatModel.with_script(*script),
         initial={"stage": "prd_draft", "current_step": 5, "confirmed_steps": [1, 2, 3, 4, 5],
-                 "design": DESIGN.model_dump(mode="json"), "agent_design": DESIGN.model_dump(mode="json"),
+                 "design": DESIGN.model_dump(mode="json"),
                  "id_counters": {"FR": 3, "NFR": 1, "OOS": 1, "GAP": 2},
                  "gaps": [g.model_dump(mode="json") for g in GAPS]},
     )  # fmt: skip

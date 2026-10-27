@@ -62,8 +62,6 @@ CLOSING = f"""
 
 {ATTRIBUTION}
 """
-# The template's own footer, before the diagram appendix existed.
-FOOTER = REPORT + CLOSING
 
 
 def _capitalised(text: str) -> str:

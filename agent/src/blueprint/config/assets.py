@@ -16,6 +16,7 @@ ASSET_FILES = (
     "course-context.md",
     "design-judge-reviewer.md",
     "design-judge-merge.md",
+    "document-importer.md",
     "to-spec.md",
     "to-tickets.md",
     "LICENSE-mattpocock-skills.txt",
@@ -32,6 +33,7 @@ class Assets:
     course_context: str
     design_judge_reviewer: str
     design_judge_merge: str
+    document_importer: str
     to_spec: str
     to_tickets: str
     license: str

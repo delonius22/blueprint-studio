@@ -11,15 +11,12 @@ from blueprint.exports.docx_util import (
     table,
     to_bytes,
 )
+from blueprint.utils.text import number
 
 ATTRIBUTION = (
     "This document was extended with the to-spec method from mattpocock-skills 1.2.3 "
     "(MIT License, © 2026 Matt Pocock)."
 )
-
-
-def _num(value: float | None) -> str:
-    return "" if value is None else f"{value:g}"
 
 
 def render_prd(state: SessionState, session_name: str, version: str) -> bytes:
@@ -74,7 +71,7 @@ def _render(
         document,
         ["ID", "Category", "Requirement", "Metric", "Target", "Unit"],
         [
-            [n.id, n.category, n.statement, n.metric or "", _num(n.target), n.unit or ""]
+            [n.id, n.category, n.statement, n.metric or "", number(n.target), n.unit or ""]
             for n in doc.non_functional_requirements
         ],
     )

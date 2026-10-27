@@ -359,7 +359,8 @@ class Draft:
     gaps: list[Gap] = dataclasses.field(default_factory=list)
 
 
-def _upsert(tool: ListTool, draft: Draft, args: dict[str, Any]) -> str:
+def upsert_item(tool: ListTool, draft: Draft, args: dict[str, Any]) -> str:
+    """Add or replace one item of the tool's list in the draft; returns its ID."""
     try:
         parsed = tool.args.model_validate(args)
     except ValidationError as exc:
@@ -464,7 +465,7 @@ def run_tool(name: str, args: dict[str, Any], draft: Draft, allowed: list[str]) 
         draft.design = draft.design.model_copy(update={"cap_stance": stance})
         return json.dumps({"recorded": "cap_stance"})
     tool = LIST_TOOLS[name]
-    item_id = _upsert(tool, draft, args)
+    item_id = upsert_item(tool, draft, args)
     result: dict[str, str] = {"recorded": item_id}
     if tool.note:
         result["note"] = tool.note

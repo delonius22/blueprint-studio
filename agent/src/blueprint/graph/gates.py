@@ -7,7 +7,7 @@ next run brings. These helpers are pure functions of the message list.
 
 import json
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
@@ -16,9 +16,10 @@ from pydantic import BaseModel, ValidationError
 CONFIRM_STEP = "confirm_step"
 DECIDE_GAPS = "decide_gaps"
 SIGN_OFF_PRD = "sign_off_prd"
+REVIEW_IMPORT = "review_import"
 # Every approval gate (S11.4); the graph never executes these, the user answers them. Since the
 # build, seams, proposed changes and tickets are accepted automatically and have no gate.
-GATES = frozenset({CONFIRM_STEP, DECIDE_GAPS, SIGN_OFF_PRD})
+GATES = frozenset({CONFIRM_STEP, DECIDE_GAPS, SIGN_OFF_PRD, REVIEW_IMPORT})
 
 # Custom graph event asking the agent endpoint to stream a gate tool call to the browser,
 # under the tool call's own ID, once the graph has decided the card may open.
@@ -131,3 +132,28 @@ def pending_gate(messages: Sequence[BaseMessage]) -> str | None:
         if call["name"] in GATES:
             return str(call["name"])
     return None
+
+
+# --- the tools of one run ---------------------------------------------------------------------
+
+
+def frontend_actions(state: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The frontend tools CopilotKit sent with this run (PRD OQ-2)."""
+    copilotkit: Any = state.get("copilotkit") or {}
+    return list(copilotkit.get("actions") or [])
+
+
+def last_message(state: Mapping[str, Any]) -> BaseMessage | None:
+    messages = state.get("messages") or []
+    return messages[-1] if messages else None
+
+
+def backend_calls(state: Mapping[str, Any], message: AIMessage) -> list[dict[str, Any]]:
+    """The calls the graph executes itself: everything but frontend tools and gates."""
+    frontend = {str(action.get("name")) for action in frontend_actions(state)} | GATES
+    return [dict(call) for call in message.tool_calls if call["name"] not in frontend]
+
+
+def confirm_calls(message: AIMessage) -> list[dict[str, Any]]:
+    """confirm_step calls, which design_tools checks for blockers before any card opens (S5.6)."""
+    return [dict(call) for call in message.tool_calls if call["name"] == CONFIRM_STEP]

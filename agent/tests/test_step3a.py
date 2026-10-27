@@ -1,25 +1,11 @@
 """T-06: Step 3a — components, flows and blueprint framing (S2.7, S5.2, S5.3, FR-10)."""
 
-import json
-from collections.abc import Sequence
 
-from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from fakes import ScriptedChatModel, calls, results
+from langchain_core.messages import AIMessage, SystemMessage
 from seam import GraphSeam, at_step
 
 from blueprint.domain.models import Component, Flow, FlowStep
-
-
-def calls(*entries: tuple[str, dict[str, object]]) -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[{"name": n, "args": a, "id": f"c{i}"} for i, (n, a) in enumerate(entries)],
-    )
-
-
-def results(messages: Sequence[object]) -> list[dict[str, object]]:
-    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
-
 
 COMPONENTS: list[tuple[str, dict[str, object]]] = [
     ("upsert_component", {"name": "Mobile app", "kind": "client", "responsibility": "UI"}),

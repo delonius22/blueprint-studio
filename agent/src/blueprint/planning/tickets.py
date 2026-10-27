@@ -15,6 +15,7 @@ from pydantic import Field
 
 from blueprint.config.assets import Assets
 from blueprint.domain.models import Model, PrdDoc, Ticket
+from blueprint.utils.text import plural
 
 GAP_NOTE = re.compile(r"^GAP-\d+:")
 
@@ -180,6 +181,6 @@ def tickets_summary(tickets: Sequence[Ticket]) -> str:
         for t in tickets
     ]
     return (
-        f"Here is the breakdown: {len(tickets)} ticket{'s' if len(tickets) != 1 else ''}, numbered "
+        f"Here is the breakdown: {plural(len(tickets), 'ticket')}, numbered "
         "in build order.\n\n" + "\n".join(lines)
     )

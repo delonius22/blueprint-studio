@@ -15,10 +15,12 @@ from blueprint.domain.models import STAGES, Design
 from blueprint.domain.state import SESSION_FIELDS, DesignState
 
 S2_2_FIELDS = {
-    "session_id", "stage", "current_step", "confirmed_steps", "design", "agent_design",
+    "session_id", "stage", "current_step", "confirmed_steps", "design",
     "critiques", "scorecard", "gaps", "review_model_distinct", "prd_draft", "prd_versions",
     "proposed_changes", "seams", "tickets", "tickets_approved_at", "id_counters", "tokens_used",
     "token_budget", "last_error",
+    # SPEC-document-import §3
+    "attachments", "import_queue", "import_notes", "prd_context", "provenance",
 }  # fmt: skip
 
 
@@ -64,11 +66,13 @@ async def test_create_returns_201_and_initial_state(pool: AsyncConnectionPool[An
     assert set(state) == S2_2_FIELDS
     assert state == {
         "session_id": body["id"], "stage": "interview", "current_step": 1,
-        "confirmed_steps": [], "design": Design().model_dump(mode="json"), "agent_design": None,
+        "confirmed_steps": [], "design": Design().model_dump(mode="json"),
         "critiques": [], "scorecard": None, "gaps": [], "review_model_distinct": True,
         "prd_draft": None, "prd_versions": [], "proposed_changes": [], "seams": [],
         "tickets": [], "tickets_approved_at": None, "id_counters": {},
         "tokens_used": {"interview": 0, "review": 0}, "token_budget": 12345, "last_error": None,
+        "attachments": [], "import_queue": [], "import_notes": [], "prd_context": [],
+        "provenance": {},
     }  # fmt: skip
 
 
@@ -241,11 +245,15 @@ async def test_openapi_describes_every_route_with_typed_models(
         ("PATCH", "/api/sessions/{session_id}"), ("DELETE", "/api/sessions/{session_id}"),
         ("GET", "/api/sessions/{session_id}/downloads"),
         ("GET", "/api/sessions/{session_id}/downloads/{kind}"),
+        ("GET", "/api/sessions/{session_id}/attachments"),
+        ("POST", "/api/sessions/{session_id}/attachments"),
+        ("DELETE", "/api/sessions/{session_id}/attachments/{attachment_id}"),
+        ("GET", "/api/sessions/{session_id}/attachments/{attachment_id}/content"),
     }  # fmt: skip
     for key, op in operations.items():
         for status, response in op["responses"].items():
             if status.startswith("2"):
-                if key[1].endswith("{kind}"):  # a file: every media type is typed as binary
+                if key[1].endswith(("{kind}", "/content")):  # a file: every media type is binary
                     assert all(
                         c["schema"] == {"type": "string", "format": "binary"}
                         for c in response["content"].values()

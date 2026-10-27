@@ -7,18 +7,24 @@ state snapshots and frontend writes share one representation.
 from typing import Any
 
 from copilotkit import CopilotKitState
+from pydantic import Field
 
 from blueprint.domain.models import (
+    AttachmentRef,
     Critique,
     Design,
     ErrorInfo,
     Gap,
+    ImportCandidate,
+    ImportNote,
     Model,
     PrdDoc,
     PrdVersion,
     ProposedChange,
     Scorecard,
     Seam,
+    SourceExcerpt,
+    SourceRef,
     Stage,
     Ticket,
 )
@@ -34,7 +40,6 @@ class DesignState(CopilotKitState):
     current_step: int
     confirmed_steps: list[int]
     design: JSON
-    agent_design: JSON | None
     critiques: list[JSON]
     scorecard: JSON | None
     gaps: list[JSON]
@@ -49,6 +54,11 @@ class DesignState(CopilotKitState):
     tokens_used: dict[str, int]
     token_budget: int
     last_error: JSON | None
+    attachments: list[JSON]
+    import_queue: list[JSON]
+    import_notes: list[JSON]
+    prd_context: list[JSON]
+    provenance: dict[str, JSON]
 
 
 class SessionState(Model):
@@ -59,7 +69,6 @@ class SessionState(Model):
     current_step: int
     confirmed_steps: list[int]
     design: Design
-    agent_design: Design | None
     critiques: list[Critique]
     scorecard: Scorecard | None
     gaps: list[Gap]
@@ -74,6 +83,12 @@ class SessionState(Model):
     tokens_used: dict[str, int]
     token_budget: int
     last_error: ErrorInfo | None
+    # Document import (SPEC-document-import §3); sessions created before it have none of these.
+    attachments: list[AttachmentRef] = Field(default_factory=list)
+    import_queue: list[ImportCandidate] = Field(default_factory=list)
+    import_notes: list[ImportNote] = Field(default_factory=list)
+    prd_context: list[SourceExcerpt] = Field(default_factory=list)
+    provenance: dict[str, SourceRef] = Field(default_factory=dict)
 
 
 # Fields of DesignState that belong to the session (S2.2), as opposed to the
@@ -91,7 +106,6 @@ def new_session_state(session_id: str, token_budget: int, review_model_distinct:
         current_step=1,
         confirmed_steps=[],
         design=Design(),
-        agent_design=None,
         critiques=[],
         scorecard=None,
         gaps=[],

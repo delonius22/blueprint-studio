@@ -17,6 +17,7 @@ from blueprint.config.assets import Assets
 from blueprint.domain.models import DIMENSIONS, Design, DimensionScore, Model, Scorecard
 from blueprint.interview.prompts import design_summary
 from blueprint.llm.gateway import InvalidStructuredOutput, Meter, ModelGateway
+from blueprint.utils.text import transcript
 
 # Q-10 (PRD OQ-6), answered: quote only the user's messages. "conversation" would also allow
 # the interviewer's turns; it is kept only so tests can show the check distinguishes the two.
@@ -83,21 +84,6 @@ def scorecard_prompt(assets: Assets, design: Design, quotes_from: QuotesFrom) ->
     )
 
 
-def _transcript(messages: Sequence[BaseMessage]) -> str:
-    lines = []
-    for message in messages:
-        role = (
-            "User"
-            if isinstance(message, HumanMessage)
-            else "Interviewer"
-            if isinstance(message, AIMessage)
-            else None
-        )
-        if role and message.text.strip():
-            lines.append(f"{role}: {message.text.strip()}")
-    return "\n\n".join(lines)
-
-
 async def make_scorecard(
     gateway: ModelGateway,
     meter: Meter,
@@ -109,7 +95,7 @@ async def make_scorecard(
 ) -> Scorecard:
     prompt: list[BaseMessage] = [
         SystemMessage(scorecard_prompt(assets, design, quotes_from)),
-        HumanMessage("Conversation:\n\n" + _transcript(messages)),
+        HumanMessage("Conversation:\n\n" + transcript(messages)),
     ]
     issues: list[str] = []
     for _attempt in range(2):

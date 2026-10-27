@@ -1,24 +1,11 @@
 """T-05: Step 2 — entities, relationships, endpoints and storage choices (S2.7, S5.3, S5.5)."""
 
-import json
-from collections.abc import Sequence
 
-from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, ToolMessage
+from fakes import ScriptedChatModel, calls, results
+from langchain_core.messages import AIMessage
 from seam import GraphSeam, at_step
 
 from blueprint.domain.models import Endpoint, Entity, EntityField, Relationship, StorageChoice
-
-
-def calls(*entries: tuple[str, dict[str, object]]) -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[{"name": n, "args": a, "id": f"c{i}"} for i, (n, a) in enumerate(entries)],
-    )
-
-
-def results(messages: Sequence[object]) -> list[dict[str, object]]:
-    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
 
 
 def step2(*script: object) -> GraphSeam:

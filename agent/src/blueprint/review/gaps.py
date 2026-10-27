@@ -18,6 +18,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from blueprint.config.assets import Assets
 from blueprint.domain.models import Design, Gap, Lens, Model, Severity
 from blueprint.interview.tools import all_item_ids, issue_id
+from blueprint.utils.text import plural
 
 LENSES: tuple[Lens, ...] = ("security", "efficiency", "maintainability")
 SEVERITY_RANK: dict[str, int] = {"high": 0, "medium": 1, "low": 2}
@@ -133,7 +134,7 @@ def review_summary(gaps: Sequence[Gap]) -> str:
     counts = {s: sum(1 for g in gaps if g.severity == s) for s in ("high", "medium", "low")}
     detail = ", ".join(f"{n} {s}" for s, n in counts.items() if n)
     return (
-        f"Design review complete: {len(gaps)} gap{'s' if len(gaps) != 1 else ''} ({detail}). "
+        f"Design review complete: {plural(len(gaps), 'gap')} ({detail}). "
         "They are listed in the gap register; answer each one or accept it as an open risk."
     )
 
