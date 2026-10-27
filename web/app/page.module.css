@@ -1,19 +1,43 @@
 .page {
-  min-height: 100vh;
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 24px 28px 40px;
 }
 
 .header {
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 1.25rem;
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  padding: 12px 18px;
 }
 
 .header h1 {
-  font-size: 1.25rem;
+  font-size: 26px;
   margin: 0;
 }
 
 .main {
-  margin: 0 auto;
-  max-width: 48rem;
-  padding: 1.5rem 1.25rem;
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+.start {
+  flex: 3 1 30rem;
+  min-width: 0;
+}
+
+.sessions {
+  flex: 2 1 22rem;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px 12px 28px;
+  }
 }

@@ -1,0 +1,67 @@
+.register {
+  padding: 16px 18px;
+}
+
+.register h2 {
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.register table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.register th,
+.register td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.register th {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  font-weight: 400;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Severity chips: status fills with dark text and a ring (DESIGN.md, Status). */
+.high,
+.medium,
+.low {
+  box-shadow: var(--frame-tag);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.high {
+  background: var(--crit-fill);
+  color: var(--on-status);
+}
+
+.medium {
+  background: var(--warn-fill);
+  color: var(--on-status);
+}
+
+.low {
+  color: var(--fg);
+}

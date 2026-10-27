@@ -8,8 +8,8 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import END
 from seam import GraphSeam
 
-from blueprint.domain import Component, Design, FailureMode, Spof
-from blueprint.graph import route_design_tools, route_interviewer, route_start
+from blueprint.domain.models import Component, Design, FailureMode, Spof
+from blueprint.graph.routing import route_design_tools, route_interviewer, route_start
 
 CONFIRM_STEP = {
     "name": "confirm_step",

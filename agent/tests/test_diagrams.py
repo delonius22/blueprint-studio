@@ -12,9 +12,9 @@ from docx import Document
 from fixtures import complete_state
 from test_prd import signed_off_state
 
-from blueprint import diagrams
-from blueprint.domain import Design
-from blueprint.downloads import render, unmet
+from blueprint.domain.models import Design
+from blueprint.exports import diagrams
+from blueprint.exports.downloads import render, unmet
 
 EXPECTED = REPO_ROOT / "agent" / "tests" / "expected" / "diagrams"
 DESIGN = Design.model_validate(json.loads((EXPECTED / "design.json").read_text()))

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 // T-02: the session list shows sessions newest first with name and stage, paginated by
-// keyset cursor, and creates, renames and deletes them (SPECS S3, S11.1).
+// keyset cursor, and renames and deletes them (SPECS S3, S11.1). Creating is new-session.test.
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SessionList } from "../components/SessionList";
+import { SessionList } from "../components/sessions/SessionList";
 import type { SessionSummary } from "../lib/sessions";
 
 function session(id: string, name: string, stage = "interview", step = 1): SessionSummary {
@@ -57,7 +57,7 @@ describe("SessionList", () => {
               next_cursor: "c1",
             },
           };
-    render(<SessionList onOpen={() => {}} />);
+    render(<SessionList />);
 
     await waitFor(() => expect(names()).toEqual(["Newest", "Middle"]));
     expect(calls[0]).toMatchObject({ method: "GET", url: "/api/sessions?limit=20" });
@@ -71,34 +71,6 @@ describe("SessionList", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
-  it("creates a named session and opens it", async () => {
-    respond = ({ method }) =>
-      method === "POST"
-        ? { status: 201, body: session("new-id", "URL shortener") }
-        : { status: 200, body: { items: [], next_cursor: null } };
-    const onOpen = vi.fn();
-    render(<SessionList onOpen={onOpen} />);
-
-    await userEvent.type(screen.getByLabelText("Session name"), "URL shortener");
-    await userEvent.click(screen.getByRole("button", { name: "New session" }));
-
-    await waitFor(() => expect(onOpen).toHaveBeenCalledWith("new-id"));
-    expect(calls.at(-1)).toEqual({ method: "POST", url: "/api/sessions", body: { name: "URL shortener" } });
-  });
-
-  it("shows the API's error message when a request is rejected", async () => {
-    respond = ({ method }) =>
-      method === "POST"
-        ? { status: 422, body: { error: { code: "invalid_request", message: "name: too long" } } }
-        : { status: 200, body: { items: [], next_cursor: null } };
-    render(<SessionList onOpen={() => {}} />);
-
-    await userEvent.type(screen.getByLabelText("Session name"), "x");
-    await userEvent.click(screen.getByRole("button", { name: "New session" }));
-
-    expect((await screen.findByRole("alert")).textContent).toBe("name: too long");
-  });
-
   it("renames a session, moving it to the top, and deletes one after confirmation", async () => {
     respond = ({ method, url }) => {
       if (method === "PATCH") return { status: 200, body: session("2", "Renamed") };
@@ -107,7 +79,7 @@ describe("SessionList", () => {
       return { status: 200, body: { items: [session("1", "First"), session("2", "Second")], next_cursor: null } };
     };
     vi.stubGlobal("confirm", vi.fn(() => true));
-    render(<SessionList onOpen={() => {}} />);
+    render(<SessionList />);
     await waitFor(() => expect(names()).toEqual(["First", "Second"]));
 
     await userEvent.click(screen.getByRole("button", { name: "Rename Second" }));

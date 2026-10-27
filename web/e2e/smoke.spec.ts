@@ -1,6 +1,6 @@
 // T-20: one session through the full stack with scripted fake models — from creating a session
 // to downloading the zip (SPECS S10.8) — run as five sessions at once (NFR-12). The first one
-// also scans every screen, panel and gate card for WCAG 2.1 AA violations in both themes and
+// also scans every screen, panel and gate card for WCAG 2.1 AA violations in all three themes and
 // drives the session list and a gate card by keyboard (S11.7).
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
@@ -9,15 +9,32 @@ import { strFromU8, unzipSync } from "fflate";
 
 type Violations = { scope: string; theme: string; rule: string; impact: string | null | undefined; nodes: string[] }[];
 
+// The three themes (DESIGN.md): Auto gives Day on a light device and Night on a dark one;
+// Contrast is chosen. Animations are frozen so a twinkling star never changes a result.
+const THEMES = [
+  { theme: "day", colorScheme: "light" },
+  { theme: "night", colorScheme: "dark" },
+  { theme: "contrast", colorScheme: "dark" },
+] as const;
+
 async function scan(page: Page, scope: string, found: Violations): Promise<void> {
-  for (const theme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: theme });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const { theme, colorScheme } of THEMES) {
+    await page.emulateMedia({ colorScheme });
+    await page.evaluate((chosen) => {
+      document.documentElement.dataset.theme = chosen;
+      document.documentElement.classList.toggle("dark", chosen !== "day");
+    }, theme);
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
     for (const v of result.violations) {
       found.push({ scope, theme, rule: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5) });
     }
   }
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "day";
+    document.documentElement.classList.remove("dark");
+  });
 }
 
 // The chat input asks "What would you like to build?" until the first message, then for answers.
@@ -71,11 +88,13 @@ for (let n = 1; n <= 5; n++) {
       await name.focus();
       await page.keyboard.type(`Smoke ${tag}`);
       await page.keyboard.press("Tab");
-      await expect(page.getByRole("button", { name: "New session" })).toBeFocused();
+      await expect(page.getByRole("button", { name: "Choose files" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(page.getByRole("button", { name: "Start session" })).toBeFocused();
       await page.keyboard.press("Enter");
     } else {
       await name.fill(`Smoke ${tag}`);
-      await page.getByRole("button", { name: "New session" }).click();
+      await page.getByRole("button", { name: "Start session" }).click();
     }
     await page.waitForURL(/\/s\//);
     const sessionId = page.url().split("/s/")[1];
@@ -89,6 +108,24 @@ for (let n = 1; n <= 5; n++) {
     const chat = page.getByRole("complementary", { name: "Interview chat" });
     await expect(chat.getByText(`✓ Recorded FR-2: Visitors are redirected for ${tag}`)).toBeVisible();
     if (audit) await scan(page, "workspace: canvas (interview)", violations);
+    if (audit) {
+      // Document import: attach a brief, review what it says, and record it with its source.
+      const brief = `# Brief\n\nLinks can be named for ${tag}.\n`;
+      await page
+        .getByLabel("Files to attach")
+        .setInputFiles({ name: "brief.md", mimeType: "text/markdown", buffer: Buffer.from(brief) });
+      // Every file says what it is before it is attached.
+      await page.getByRole("group", { name: /brief\.md/ }).getByRole("radio", { name: "PRD" }).check();
+      await page.getByRole("button", { name: "Attach 1 file" }).click();
+      const review = page.getByRole("form", { name: "Review what your files say" });
+      await expect(review).toBeVisible();
+      await expect(page.getByRole("region", { name: /^Attached files/ })).toContainText("ATT-1: brief.md");
+      await expect(page.getByRole("region", { name: /^Attached files/ })).toContainText("PRD");
+      await scan(page, "gate card: review_import + attached files", violations);
+      await review.getByRole("button", { name: "Record accepted items" }).click();
+      await expect(page.getByRole("region", { name: /^Functional requirements/ }).getByText("FR-3")).toBeVisible();
+      await expect(page.getByText("from brief.md · Brief")).toBeVisible();
+    }
     await send(page, "CONFIRM 1");
     await expect(page.getByRole("group", { name: /Confirm Step 1/ })).toBeVisible();
     if (audit) await scan(page, "gate card: confirm_step", violations);
@@ -153,6 +190,7 @@ for (let n = 1; n <= 5; n++) {
     expect(detail.state.design.functional_requirements.map((r: { statement: string }) => r.statement)).toEqual([
       `Users shorten URLs for ${tag}`,
       `Visitors are redirected for ${tag}`,
+      ...(audit ? [`Links can be named for ${tag}`] : []),
     ]);
     expect(detail.state.prd_versions.map((v: { version: string }) => v.version)).toEqual(["1.0", "1.1", "1.2"]);
 

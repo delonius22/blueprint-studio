@@ -4,8 +4,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ErrorAlert } from "../components/ErrorAlert";
-import { TokenMeter } from "../components/TokenMeter";
+import { ErrorAlert } from "../components/workspace/ErrorAlert";
+import { TokenMeter } from "../components/workspace/TokenMeter";
 import { clearErrorForNewTurn } from "../lib/errors";
 
 afterEach(cleanup);

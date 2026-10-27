@@ -1,17 +1,16 @@
 .card {
-  background: var(--surface);
+  background: var(--panel);
+  box-shadow: var(--frame-panel);
   color: var(--fg); /* never inherit the chat bubble's colour onto this background */
-  border: 1px solid var(--border);
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  margin: 0.5rem 0;
-  padding: 0.9rem;
+  gap: 12px;
+  margin: 8px 12px 14px 4px;
+  padding: 14px 16px;
 }
 
 .card h3 {
-  font-size: 1rem;
+  font-size: 16px;
   margin: 0;
 }
 
@@ -21,31 +20,20 @@
 }
 
 .actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.primary {
-  background: var(--link);
-  border-color: var(--link);
-  color: var(--bg);
+  gap: 8px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 4px;
 }
 
 .field textarea {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: inherit;
-  font: inherit;
   min-height: 4.5rem;
-  padding: 0.4rem 0.6rem;
 }
 
 .outcome {
@@ -54,15 +42,18 @@
 }
 
 .gap {
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 0;
+  box-shadow: var(--frame-inner);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.6rem;
+  gap: 6px;
+  margin: 2px;
+  padding: 10px 12px;
 }
 
 .gap legend {
-  font-weight: 600;
-  padding: 0 0.3rem;
+  background: var(--panel);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  padding: 0 6px;
 }

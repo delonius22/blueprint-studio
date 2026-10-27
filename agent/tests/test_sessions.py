@@ -11,14 +11,16 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg_pool import AsyncConnectionPool
 from service import build_service, client, event_types, post_run, run_input, streamed_text, user
 
-from blueprint.domain import STAGES, Design
-from blueprint.state import SESSION_FIELDS, DesignState
+from blueprint.domain.models import STAGES, Design
+from blueprint.domain.state import SESSION_FIELDS, DesignState
 
 S2_2_FIELDS = {
-    "session_id", "stage", "current_step", "confirmed_steps", "design", "agent_design",
+    "session_id", "stage", "current_step", "confirmed_steps", "design",
     "critiques", "scorecard", "gaps", "review_model_distinct", "prd_draft", "prd_versions",
     "proposed_changes", "seams", "tickets", "tickets_approved_at", "id_counters", "tokens_used",
     "token_budget", "last_error",
+    # SPEC-document-import §3
+    "attachments", "import_queue", "import_notes", "prd_context", "provenance",
 }  # fmt: skip
 
 
@@ -64,11 +66,13 @@ async def test_create_returns_201_and_initial_state(pool: AsyncConnectionPool[An
     assert set(state) == S2_2_FIELDS
     assert state == {
         "session_id": body["id"], "stage": "interview", "current_step": 1,
-        "confirmed_steps": [], "design": Design().model_dump(mode="json"), "agent_design": None,
+        "confirmed_steps": [], "design": Design().model_dump(mode="json"),
         "critiques": [], "scorecard": None, "gaps": [], "review_model_distinct": True,
         "prd_draft": None, "prd_versions": [], "proposed_changes": [], "seams": [],
         "tickets": [], "tickets_approved_at": None, "id_counters": {},
         "tokens_used": {"interview": 0, "review": 0}, "token_budget": 12345, "last_error": None,
+        "attachments": [], "import_queue": [], "import_notes": [], "prd_context": [],
+        "provenance": {},
     }  # fmt: skip
 
 
@@ -241,11 +245,15 @@ async def test_openapi_describes_every_route_with_typed_models(
         ("PATCH", "/api/sessions/{session_id}"), ("DELETE", "/api/sessions/{session_id}"),
         ("GET", "/api/sessions/{session_id}/downloads"),
         ("GET", "/api/sessions/{session_id}/downloads/{kind}"),
+        ("GET", "/api/sessions/{session_id}/attachments"),
+        ("POST", "/api/sessions/{session_id}/attachments"),
+        ("DELETE", "/api/sessions/{session_id}/attachments/{attachment_id}"),
+        ("GET", "/api/sessions/{session_id}/attachments/{attachment_id}/content"),
     }  # fmt: skip
     for key, op in operations.items():
         for status, response in op["responses"].items():
             if status.startswith("2"):
-                if key[1].endswith("{kind}"):  # a file: every media type is typed as binary
+                if key[1].endswith(("{kind}", "/content")):  # a file: every media type is binary
                     assert all(
                         c["schema"] == {"type": "string", "format": "binary"}
                         for c in response["content"].values()
@@ -262,11 +270,11 @@ async def test_openapi_describes_every_route_with_typed_models(
 async def test_checked_in_rest_contract_matches_the_service(pool: AsyncConnectionPool[Any]) -> None:
     from conftest import REPO_ROOT
 
-    from blueprint.openapi import rest_document
+    from blueprint.api.openapi import rest_document
 
     exported = rest_document()
     checked_in = json.loads((REPO_ROOT / "web" / "openapi.json").read_text())
-    assert checked_in == exported, "run: uv run python -m blueprint.openapi > ../web/openapi.json"
+    assert checked_in == exported, "run: uv run python -m blueprint.api.openapi > ../web/openapi.json"
 
     app = await build_service(pool)
     async with client(app) as http:
@@ -277,6 +285,6 @@ async def test_checked_in_rest_contract_matches_the_service(pool: AsyncConnectio
 
 
 def test_session_state_model_matches_design_state() -> None:
-    from blueprint.state import SessionState
+    from blueprint.domain.state import SessionState
 
     assert set(SessionState.model_fields) == set(SESSION_FIELDS)

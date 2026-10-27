@@ -5,9 +5,9 @@ user stories, tickets and open gaps of the current PRD and breakdown, and the
 required report; it ends with the to-tickets / to-spec attribution line.
 """
 
-from blueprint.diagrams import markdown
-from blueprint.domain import Feature, PrdDoc, Ticket, UserStory
-from blueprint.state import SessionState
+from blueprint.domain.models import Feature, PrdDoc, Ticket, UserStory
+from blueprint.domain.state import SessionState
+from blueprint.exports.diagrams import markdown
 
 ATTRIBUTION = "*Ticket and spec method: to-tickets / to-spec, mattpocock-skills 1.2.3 (MIT, © 2026 Matt Pocock).*"
 
@@ -62,8 +62,6 @@ CLOSING = f"""
 
 {ATTRIBUTION}
 """
-# The template's own footer, before the diagram appendix existed.
-FOOTER = REPORT + CLOSING
 
 
 def _capitalised(text: str) -> str:

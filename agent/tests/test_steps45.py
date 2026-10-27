@@ -1,15 +1,14 @@
 """T-08: Steps 4-5 and the final scorecard (S2.7, S2.8, S5.3, S5.6, S5.8)."""
 
-import json
 from collections.abc import Sequence
 from typing import Any
 
 import pytest
-from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from fakes import ScriptedChatModel, calls, results
+from langchain_core.messages import AIMessage, HumanMessage
 from seam import GraphSeam, at_step
 
-from blueprint.domain import (
+from blueprint.domain.models import (
     DIMENSIONS,
     Component,
     Design,
@@ -19,7 +18,7 @@ from blueprint.domain import (
     Spof,
     Tradeoff,
 )
-from blueprint.scoring import ScorecardDraft, problems
+from blueprint.interview.scoring import ScorecardDraft, problems
 
 CONFIRM_STEP = {
     "name": "confirm_step",
@@ -36,19 +35,6 @@ BASE = Design(
     failure_modes=[FailureMode(id="FM-1", scenario="DB fails", behaviour="failover")],
 )
 COUNTERS = {"CMP": 1, "FM": 1}
-
-
-def calls(*entries: tuple[str, dict[str, Any]], prefix: str = "c") -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[
-            {"name": n, "args": a, "id": f"{prefix}{i}"} for i, (n, a) in enumerate(entries)
-        ],
-    )
-
-
-def results(messages: Sequence[object]) -> list[dict[str, Any]]:
-    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
 
 
 def scorecard(

@@ -12,8 +12,8 @@ from psycopg_pool import AsyncConnectionPool
 from service import build_service, client
 from test_prd import libreoffice_pdf
 
-from blueprint.downloads import render
 from blueprint.exports.delivery_docx import build_waves
+from blueprint.exports.downloads import render
 
 
 def lines(data: bytes) -> list[str]:

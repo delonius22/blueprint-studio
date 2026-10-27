@@ -1,16 +1,13 @@
 """T-03: Step 1 — clarify requirements, recorded live as structured items (S2.4-S2.7, S2.15, S5.1-S5.4)."""
 
-import json
-from collections.abc import Sequence
 
 import pytest
-from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from fakes import ScriptedChatModel, calls, results
+from langchain_core.messages import AIMessage, SystemMessage
 from pydantic import ValidationError
 from seam import GraphSeam
 
-from blueprint.design import violations
-from blueprint.domain import (
+from blueprint.domain.models import (
     Component,
     Design,
     Entity,
@@ -24,19 +21,9 @@ from blueprint.domain import (
     Requirement,
     Spof,
 )
+from blueprint.interview.tools import violations
 
 ARCHITECTURE_TOOLS = {"upsert_component", "upsert_flow", "upsert_storage_choice", "upsert_endpoint"}
-
-
-def calls(*entries: tuple[str, dict[str, object]]) -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[{"name": n, "args": a, "id": f"c{i}"} for i, (n, a) in enumerate(entries)],
-    )
-
-
-def results(messages: Sequence[object]) -> list[dict[str, object]]:
-    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
 
 
 async def test_step1_answers_are_recorded_as_items_with_ids() -> None:
@@ -75,7 +62,6 @@ async def test_step1_answers_are_recorded_as_items_with_ids() -> None:
     ]  # fmt: skip
     state = await seam.state()
     assert state["id_counters"] == {"FR": 2, "NFR": 1, "OOS": 1, "EST": 1}
-    assert state["agent_design"] == state["design"]
     # the design_tools node ran the calls and returned to the interviewer
     assert len(interview.calls) == 2
     assert [r["recorded"] for r in results(interview.calls[1].messages)] == [

@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from psycopg_pool import AsyncConnectionPool
 
 from blueprint.app import assemble, prepare
-from blueprint.models import RoleModels
+from blueprint.llm.clients import RoleModels
 
 
 async def build_service(

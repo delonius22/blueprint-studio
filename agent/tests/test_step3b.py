@@ -1,21 +1,20 @@
 """T-07: Step 3b — CAP stance, cache policies and the failure-mode gate (S2.7, S5.3, S5.6)."""
 
 import json
-from collections.abc import Sequence
 from typing import Any
 
-from fakes import ScriptedChatModel
-from langchain_core.messages import AIMessage, ToolMessage
+from fakes import ScriptedChatModel, calls, results
+from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from seam import GraphSeam, at_step
 from service import post_run, run_input, user
 
 from blueprint.app import create_app
-from blueprint.assets import load_assets
-from blueprint.domain import CachePolicy, CapStance, Design, FailureMode
-from blueprint.graph import build_graph
-from blueprint.models import RoleModels
-from blueprint.state import new_session_state
+from blueprint.config.assets import load_assets
+from blueprint.domain.models import CachePolicy, CapStance, Design, FailureMode
+from blueprint.domain.state import new_session_state
+from blueprint.graph.build import build_graph
+from blueprint.llm.clients import RoleModels
 
 CONFIRM_STEP = {
     "name": "confirm_step",
@@ -31,19 +30,6 @@ FAILURE_MODE = {
     "behaviour": "Reads served from replicas",
     "recovery": "Promote replica",
 }
-
-
-def calls(*entries: tuple[str, dict[str, Any]], prefix: str = "c") -> AIMessage:
-    return AIMessage(
-        content="",
-        tool_calls=[
-            {"name": n, "args": a, "id": f"{prefix}{i}"} for i, (n, a) in enumerate(entries)
-        ],
-    )
-
-
-def results(messages: Sequence[object]) -> list[dict[str, Any]]:
-    return [json.loads(m.text) for m in messages if isinstance(m, ToolMessage)]
 
 
 async def test_cap_stance_cache_policies_and_failure_modes_are_recorded() -> None:

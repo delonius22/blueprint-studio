@@ -2,17 +2,13 @@
 
 // The PRD sign-off card (SPECS S7.3, S11.4): approve v1.0, or reject it with a reason.
 import { type FormEvent, useId, useState } from "react";
+import type { CardProps } from "./types";
 import type { PrdDoc } from "../../lib/state";
 import styles from "./GateCard.module.css";
 
-export type SignOffAnswer = { approved: true } | { approved: false; reason: string };
+type SignOffAnswer = { approved: true } | { approved: false; reason: string };
 
-type Props = {
-  args: Partial<{ prd: PrdDoc }>;
-  status: "inProgress" | "executing" | "complete";
-  respond?: (answer: SignOffAnswer) => void;
-  result?: string;
-};
+type Props = CardProps<{ prd: PrdDoc }, SignOffAnswer>;
 
 export function SignOffCard({ args, status, respond, result }: Props) {
   const [rejecting, setRejecting] = useState(false);
@@ -56,7 +52,7 @@ export function SignOffCard({ args, status, respond, result }: Props) {
       )}
       {status === "executing" && respond && !rejecting && (
         <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={() => respond({ approved: true })}>
+          <button type="button" className="go" onClick={() => respond({ approved: true })}>
             Sign off v1.0
           </button>
           <button type="button" onClick={() => setRejecting(true)}>

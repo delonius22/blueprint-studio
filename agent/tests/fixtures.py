@@ -4,8 +4,8 @@ from typing import Any
 
 from test_prd import signed_off_state
 
-from blueprint.domain import Ticket, UserStory
-from blueprint.state import SessionState
+from blueprint.domain.models import Ticket, UserStory
+from blueprint.domain.state import SessionState
 
 
 def _story(n: int, feature: str, requirements: list[str], want: str, benefit: str) -> UserStory:

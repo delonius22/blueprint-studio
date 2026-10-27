@@ -1,6 +1,149 @@
 {
   "components": {
     "schemas": {
+      "AttachmentItem": {
+        "description": "An attached file (SPEC-document-import \u00a74).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "description": "What the user says the file is",
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "kind",
+          "media_type",
+          "size",
+          "warnings"
+        ],
+        "title": "AttachmentItem",
+        "type": "object"
+      },
+      "AttachmentListing": {
+        "properties": {
+          "accepts": {
+            "description": "The file extensions the upload route takes now",
+            "items": {
+              "type": "string"
+            },
+            "title": "Accepts",
+            "type": "array"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentItem"
+            },
+            "title": "Attachments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepts",
+          "attachments"
+        ],
+        "title": "AttachmentListing",
+        "type": "object"
+      },
+      "AttachmentRef": {
+        "additionalProperties": false,
+        "description": "An attached file as the session knows it; the bytes stay in the attachments table.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "default": "parsed",
+            "enum": [
+              "parsed",
+              "imported",
+              "failed",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "kind"
+        ],
+        "title": "AttachmentRef",
+        "type": "object"
+      },
       "CachePolicy": {
         "additionalProperties": false,
         "properties": {
@@ -851,6 +994,151 @@
         "title": "Gap",
         "type": "object"
       },
+      "ImportCandidate": {
+        "additionalProperties": false,
+        "description": "One design item a file states, waiting for the user's decision in review_import.",
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "status": {
+            "enum": [
+              "staged",
+              "offered"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Step",
+            "type": "integer"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "updates": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updates"
+          },
+          "weaknesses": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Weakness"
+            },
+            "title": "Weaknesses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "attachment_id",
+          "step",
+          "tool",
+          "args",
+          "source",
+          "status"
+        ],
+        "title": "ImportCandidate",
+        "type": "object"
+      },
+      "ImportNote": {
+        "additionalProperties": false,
+        "description": "A weakness of a recorded item, or a question about the file, for the interviewer.",
+        "properties": {
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "missing_target",
+                  "missing_unit",
+                  "unjustified_choice",
+                  "vague",
+                  "contradicts",
+                  "no_failure_mode",
+                  "ambiguous_kind"
+                ],
+                "type": "string"
+              },
+              {
+                "const": "question",
+                "type": "string"
+              }
+            ],
+            "title": "Code"
+          },
+          "detail": {
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "status": {
+            "default": "open",
+            "enum": [
+              "open",
+              "asked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Step",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attachment_id",
+          "step",
+          "code",
+          "detail",
+          "quote"
+        ],
+        "title": "ImportNote",
+        "type": "object"
+      },
       "NfrTarget": {
         "additionalProperties": false,
         "properties": {
@@ -1452,15 +1740,12 @@
         "additionalProperties": false,
         "description": "The session fields of DesignState as a typed model (S2.2), for the REST API and validation.",
         "properties": {
-          "agent_design": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Design"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentRef"
+            },
+            "title": "Attachments",
+            "type": "array"
           },
           "confirmed_steps": {
             "items": {
@@ -1497,6 +1782,20 @@
             "title": "Id Counters",
             "type": "object"
           },
+          "import_notes": {
+            "items": {
+              "$ref": "#/components/schemas/ImportNote"
+            },
+            "title": "Import Notes",
+            "type": "array"
+          },
+          "import_queue": {
+            "items": {
+              "$ref": "#/components/schemas/ImportCandidate"
+            },
+            "title": "Import Queue",
+            "type": "array"
+          },
           "last_error": {
             "anyOf": [
               {
@@ -1506,6 +1805,13 @@
                 "type": "null"
               }
             ]
+          },
+          "prd_context": {
+            "items": {
+              "$ref": "#/components/schemas/SourceExcerpt"
+            },
+            "title": "Prd Context",
+            "type": "array"
           },
           "prd_draft": {
             "anyOf": [
@@ -1530,6 +1836,13 @@
             },
             "title": "Proposed Changes",
             "type": "array"
+          },
+          "provenance": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Provenance",
+            "type": "object"
           },
           "review_model_distinct": {
             "title": "Review Model Distinct",
@@ -1609,7 +1922,6 @@
           "current_step",
           "confirmed_steps",
           "design",
-          "agent_design",
           "critiques",
           "scorecard",
           "gaps",
@@ -1709,6 +2021,55 @@
           "name"
         ],
         "title": "Signal",
+        "type": "object"
+      },
+      "SourceExcerpt": {
+        "additionalProperties": false,
+        "description": "PRD-level text from a file (problem, goals, users), for the PRD drafter.",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "topic": {
+            "enum": [
+              "problem",
+              "goals",
+              "users"
+            ],
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "source"
+        ],
+        "title": "SourceExcerpt",
+        "type": "object"
+      },
+      "SourceRef": {
+        "additionalProperties": false,
+        "description": "Where an imported item came from: the attachment, a page or heading, and the quote.",
+        "properties": {
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "string"
+          },
+          "locator": {
+            "title": "Locator",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachment_id",
+          "locator",
+          "quote"
+        ],
+        "title": "SourceRef",
         "type": "object"
       },
       "Spof": {
@@ -1891,6 +2252,64 @@
         "title": "Tradeoff",
         "type": "object"
       },
+      "UploadedAttachment": {
+        "properties": {
+          "duplicate": {
+            "description": "True when this exact file was already attached",
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "description": "What the user says the file is",
+            "enum": [
+              "prd",
+              "spec",
+              "supporting"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "kind",
+          "media_type",
+          "size",
+          "warnings",
+          "duplicate"
+        ],
+        "title": "UploadedAttachment",
+        "type": "object"
+      },
       "UserStory": {
         "additionalProperties": false,
         "properties": {
@@ -1943,6 +2362,35 @@
           "requirement_ids"
         ],
         "title": "UserStory",
+        "type": "object"
+      },
+      "Weakness": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "missing_target",
+              "missing_unit",
+              "unjustified_choice",
+              "vague",
+              "contradicts",
+              "no_failure_mode",
+              "ambiguous_kind"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "detail"
+        ],
+        "title": "Weakness",
         "type": "object"
       }
     }
@@ -2193,6 +2641,361 @@
           }
         },
         "summary": "Rename Session",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/sessions/{session_id}/attachments": {
+      "get": {
+        "operationId": "list_attachments_api_sessions__session_id__attachments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentListing"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Attachments",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "post": {
+        "operationId": "upload_attachment_api_sessions__session_id__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A PRD, a spec or a supporting document",
+            "in": "query",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "description": "A PRD, a spec or a supporting document",
+              "enum": [
+                "prd",
+                "spec",
+                "supporting"
+              ],
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "description": "The file's bytes; its name and role are query parameters",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadedAttachment"
+                }
+              }
+            },
+            "description": "Already attached"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadedAttachment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Upload Attachment",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/sessions/{session_id}/attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "remove_attachment_api_sessions__session_id__attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Remove Attachment",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/sessions/{session_id}/attachments/{attachment_id}/content": {
+      "get": {
+        "operationId": "attachment_content_api_sessions__session_id__attachments__attachment_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.jgraph.mxfile": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/vnd.mermaid": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The file as uploaded"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Attachment Content",
         "tags": [
           "sessions"
         ]

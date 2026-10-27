@@ -1,0 +1,38 @@
+.meter {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px 8px;
+  margin-left: auto;
+}
+
+.label {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+}
+
+.meter meter {
+  accent-color: var(--go-text);
+  height: 12px;
+  width: 6rem;
+}
+
+.detail {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.flag {
+  background: var(--crit-fill);
+  box-shadow: var(--frame-tag);
+  color: var(--on-status);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  padding: 1px 6px;
+}
+
+.exhausted .label,
+.warning .label {
+  color: var(--danger);
+}

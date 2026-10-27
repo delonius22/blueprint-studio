@@ -1,0 +1,202 @@
+.sky {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  z-index: 0;
+}
+
+.day,
+.night {
+  display: none;
+  inset: 0;
+  position: absolute;
+}
+
+:global([data-theme="day"]) .day,
+:global([data-theme="night"]) .night {
+  display: block;
+}
+
+.pix {
+  shape-rendering: crispEdges;
+}
+
+/* Day: three pixel clouds drifting in four steps. */
+.cloud {
+  animation: bob 6s steps(4) infinite;
+  position: absolute;
+}
+
+.cloudA {
+  left: 6%;
+  top: 18%;
+}
+
+.cloudB {
+  animation-delay: -2s;
+  right: 9%;
+  top: 46%;
+}
+
+.cloudC {
+  animation-delay: -4s;
+  bottom: 12%;
+  left: 38%;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateX(12px);
+  }
+}
+
+/* Night: two star layers twinkling out of step. */
+.twinkleA {
+  animation: twinkle 3.4s steps(2) infinite;
+}
+
+.twinkleB {
+  animation: twinkle 5.1s steps(2) infinite 1.3s;
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Constellations fade in, hold, and fade out, each on its own cycle. */
+.constellation {
+  animation: constellation var(--cycle) steps(8) infinite;
+  animation-delay: var(--delay);
+  opacity: 0;
+  position: absolute;
+}
+
+.conA {
+  --cycle: 31s;
+  --delay: 0s;
+  right: 8%;
+  top: 14%;
+}
+
+.conB {
+  --cycle: 27s;
+  --delay: 11s;
+  bottom: 14%;
+  left: 36%;
+}
+
+.conC {
+  --cycle: 29s;
+  --delay: 19s;
+  left: 7%;
+  top: 38%;
+}
+
+@keyframes constellation {
+  0%,
+  10% {
+    opacity: 0;
+  }
+  20%,
+  48% {
+    opacity: 1;
+  }
+  58%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.shoot {
+  animation: shoot var(--cycle) linear infinite;
+  animation-delay: var(--delay);
+  opacity: 0;
+  position: absolute;
+}
+
+.shootA {
+  --cycle: 15s;
+  --delay: 4s;
+  right: 30%;
+  top: 9%;
+}
+
+.shootB {
+  --cycle: 17s;
+  --delay: 11s;
+  right: 6%;
+  top: 52%;
+}
+
+@keyframes shoot {
+  0%,
+  90% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  91% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 1;
+    transform: translate(-340px, 170px);
+  }
+  97%,
+  100% {
+    opacity: 0;
+    transform: translate(-360px, 180px);
+  }
+}
+
+/* The cave mouth: rock along the top, the floor and both sides. */
+.rockTop,
+.rockFloor {
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.rockTop {
+  top: 0;
+}
+
+.rockFloor {
+  bottom: 0;
+}
+
+.wall {
+  background:
+    linear-gradient(90deg, #04050b 0 10px, #1b2448 10px 12px, transparent 12px) left / 12px 100% no-repeat,
+    repeating-linear-gradient(#04050b 0 24px, transparent 24px 60px) 10px 0 / 8px 100% no-repeat;
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  width: 18px;
+}
+
+.wallLeft {
+  left: 0;
+}
+
+.wallRight {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+/* Everything holds still; one constellation stays as a picture. */
+@media (prefers-reduced-motion: reduce) {
+  .cloud,
+  .twinkleA,
+  .twinkleB,
+  .constellation,
+  .shoot {
+    animation: none;
+  }
+
+  .conA {
+    opacity: 1;
+  }
+}

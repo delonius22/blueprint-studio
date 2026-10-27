@@ -1,0 +1,32 @@
+.menu {
+  position: relative;
+}
+
+.menu summary {
+  align-items: center;
+  display: flex;
+  list-style: none;
+}
+
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu ul {
+  list-style: none;
+  margin: 10px 9px 0 0;
+  min-width: 18rem;
+  padding: 12px 16px;
+  position: absolute;
+  right: 0;
+  z-index: 10;
+}
+
+.menu li {
+  padding: 3px 0;
+}
+
+.unavailable,
+.reason {
+  color: var(--muted);
+}

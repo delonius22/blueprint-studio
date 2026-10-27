@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 async function forward(request: Request): Promise<Response> {
   const incoming = new URL(request.url);
   const target = `${agentUrl()}${incoming.pathname}${incoming.search}`;
-  const body = ["GET", "HEAD", "DELETE"].includes(request.method) ? undefined : await request.text();
+  // Bytes, not text: an attached file must reach the agent unchanged (SPEC-document-import §4).
+  const body = ["GET", "HEAD", "DELETE"].includes(request.method) ? undefined : await request.arrayBuffer();
   const response = await fetch(target, {
     method: request.method,
     headers: { "content-type": request.headers.get("content-type") ?? "application/json" },

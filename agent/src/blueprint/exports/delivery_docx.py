@@ -3,9 +3,9 @@ and the approved tickets, stamped with tickets_approved_at (S10.9)."""
 
 from collections.abc import Sequence
 
-from blueprint.domain import PrdDoc, Ticket
+from blueprint.domain.models import PrdDoc, Ticket
+from blueprint.domain.state import SessionState
 from blueprint.exports.docx_util import bullets, new_document, parse_time, table, to_bytes
-from blueprint.state import SessionState
 
 
 def _current(state: SessionState) -> PrdDoc:

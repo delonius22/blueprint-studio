@@ -112,7 +112,7 @@ describe("browser code", () => {
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(/AGENT_URL|:8000|\/agent\b/);
     }
-    const workspace = readFileSync(join(root, "components", "Workspace.tsx"), "utf8");
+    const workspace = readFileSync(join(root, "components", "workspace", "Workspace.tsx"), "utf8");
     expect(workspace).toContain("runtimeUrl={RUNTIME_PATH}");
     expect(workspace).toContain("threadId={session.id}");
     expect(RUNTIME_PATH).toBe("/api/copilotkit");

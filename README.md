@@ -2,6 +2,8 @@
 
 A web app where an AI agent walks you through the five-step system-design framework. A second model then reviews the design for security, efficiency and maintainability gaps. The app drafts a PRD for you to sign off, extends it with `to-spec`, breaks it into tickets with `to-tickets`, and hands back Word documents, Mermaid diagrams of the design (`Diagrams.md`: architecture, data model and one sequence per flow) and a `context.md` that any agent can follow to create the Jira issues.
 
+You can also attach what you already have: a PRD or spec (`.md`, `.txt`, `.pdf`, `.docx`), a diagram (`.mmd`, `.drawio`, or an image when the interview model reads images) or notes. The agent quotes what each file states, you accept, edit or reject each item before it is recorded, items for later steps wait for their step, and the interviewer asks about whatever the file leaves weak.
+
 Built with CopilotKit and LangGraph (Python). It runs on any OpenAI-compatible model endpoint.
 
 ## Run it
@@ -72,7 +74,7 @@ The app uses two model roles, each configured by a base URL, an API key and a mo
 - **Use two different models:** if both roles point at the same model, the review still runs, but the app warns that the cross-model check is off.
 - **Other settings:** `.env.example` documents the rest.
 
-All model calls go through OpenAI's Python SDK (`openai.AsyncOpenAI`, Chat Completions), and `agent/src/blueprint/models.py` is the only module that uses it. API keys stay with the agent and never reach the web app.
+All model calls go through OpenAI's Python SDK (`openai.AsyncOpenAI`, Chat Completions), and `agent/src/blueprint/llm/clients.py` is the only module that uses it. API keys stay with the agent and never reach the web app.
 
 ## Layout
 
@@ -80,10 +82,29 @@ All model calls go through OpenAI's Python SDK (`openai.AsyncOpenAI`, Chat Compl
 |---|---|
 | `agent/` | Python 3.14 service (FastAPI, LangGraph, CopilotKit, the OpenAI SDK, python-docx), managed with `uv` |
 | `web/` | Next.js 16 App Router front end with the CopilotKit v2 hooks |
-| `app-assets/` | Runtime prompts the agent ships verbatim: interviewer instructions, course context, design-judge prompts, `to-spec`, `to-tickets` and their MIT licence |
+| `app-assets/` | Runtime prompts the agent ships verbatim: interviewer instructions, course context, design-judge prompts, the document importer, `to-spec`, `to-tickets` and their MIT licence |
 | `scripts/run_local.py` | Local mode: starts the agent and the web app without Docker |
 | `docker-compose.yml` | Server mode: Postgres, agent and web |
 | `docker-compose.e2e.yml` | Override for the end-to-end test that swaps in a scripted fake model |
+
+The agent's package, `agent/src/blueprint/`, has one folder per concern:
+
+| Folder | What it holds |
+|---|---|
+| `config/` | Settings from `.env`, the vendored prompts, startup errors |
+| `domain/` | The typed shapes of a session (`models.py`) and the graph state (`state.py`) |
+| `llm/` | The model clients, the call gateway (retries, budget, logging) and the startup check |
+| `graph/` | The graph's wiring, its pure routing, gate messages and what nodes share |
+| `interview/` | The interviewer's tools, prompt, critic, scorecard and nodes |
+| `imports/` | Reading attached files, the import proposal and its nodes |
+| `review/` | The design review, gap resolution and their nodes |
+| `planning/` | PRD v1.0, `to-spec`, proposed changes, tickets and their nodes |
+| `storage/` | The sessions and attachments tables over Postgres or SQLite |
+| `api/` | The REST routes, the agent endpoint and the OpenAPI export |
+| `exports/` | Every download, the Mermaid diagrams included |
+| `utils/` | Small helpers several packages share |
+
+The web app groups its components the same way: `components/workspace/`, `canvas/`, `gates/`, `attachments/`, `review/`, `delivery/` and `sessions/`.
 
 ## Develop and test
 
@@ -112,7 +133,7 @@ npm run test:e2e        # needs Docker: builds the server stack, then runs five 
 
 The end-to-end test is in `web/e2e/smoke.spec.ts`:
 - **What it runs:** five concurrent sessions, each from creating the session to downloading the zip.
-- **Accessibility:** it scans the pages for WCAG 2.1 AA in light and dark themes.
+- **Accessibility:** it scans the pages for WCAG 2.1 AA in all three themes (Day, Night and Contrast).
 - **Reusing a running stack:** set `E2E_REUSE_STACK=1` to use a stack that's already up.
 
 ## Design documents
@@ -122,3 +143,4 @@ The end-to-end test is in `web/e2e/smoke.spec.ts`:
 | `PRD.md` | Problem, features, functional and non-functional requirements, user stories, decisions (`D#`) |
 | `SPECS.md` | The numbered technical clauses (`S#.#`) that the code and tests cite |
 | `MODEL-CONNECTION.md` | How the app connects to models; overrides SPECS §1 where they differ |
+| `SPEC-document-import.md` | The document-import feature as specified and approved; SPECS §14 holds its clauses |

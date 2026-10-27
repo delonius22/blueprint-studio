@@ -1,0 +1,64 @@
+.viewer {
+  max-width: 60rem;
+  padding: 16px 20px 24px;
+}
+
+.top {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+}
+
+.viewer h2 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.viewer h3 {
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+}
+
+.viewer h4 {
+  font-size: 15px;
+  margin: 10px 0 4px;
+}
+
+.viewer p {
+  margin: 6px 0;
+  max-width: 72ch;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.switcher {
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.viewer table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.viewer th,
+.viewer td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.feature {
+  margin-bottom: 8px;
+}

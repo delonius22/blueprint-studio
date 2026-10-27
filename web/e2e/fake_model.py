@@ -76,6 +76,12 @@ def structured(name: str, body: dict[str, Any]) -> Any:
     blocks = json_blocks(texts[-1]) if texts else []
     if name == "PingResult":
         return {"ok": True}
+    if name == "ImportProposal":  # every sentence of the attached file is a requirement
+        attached = joined.split("<untrusted-file>", 1)[-1].split("</untrusted-file>", 1)[0]
+        quotes = [line.strip() for line in attached.splitlines() if line.strip().endswith(".")]
+        return {"summary": "A short brief.", "functional_requirements": [
+            {"quote": q, "locator": "Brief", "updates": None, "weaknesses": [], "statement": q.rstrip(".")}
+            for q in quotes]}  # fmt: skip
     if name == "CritiqueDraft":
         return {"strengths": ["Clear scope"], "bottlenecks": ["Capacity is not estimated"], "questions": ["What is the peak load?"]}
     if name == "ScorecardDraft":

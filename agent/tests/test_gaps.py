@@ -7,8 +7,8 @@ from fakes import ScriptedChatModel, prd_out
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from seam import GraphSeam
 
-from blueprint.domain import Design, Endpoint, Gap, Requirement
-from blueprint.gates import close_unanswered
+from blueprint.domain.models import Design, Endpoint, Gap, Requirement
+from blueprint.graph.gates import close_unanswered
 
 DESIGN = Design(
     functional_requirements=[Requirement(id="FR-1", statement="Users shorten URLs")],
@@ -41,7 +41,7 @@ def resolving(*script: Any, gaps: list[Gap] = GAPS) -> GraphSeam:
         ScriptedChatModel.with_script(*script),
         ScriptedChatModel.with_script(name="review"),  # the review never runs again
         initial={"stage": "gap_resolution", "current_step": 5, "confirmed_steps": [1, 2, 3, 4, 5],
-                 "design": DESIGN.model_dump(mode="json"), "agent_design": DESIGN.model_dump(mode="json"),
+                 "design": DESIGN.model_dump(mode="json"),
                  "id_counters": {"FR": 1, "EP": 1, "GAP": len(gaps)},
                  "gaps": [g.model_dump(mode="json") for g in gaps]},
     )  # fmt: skip
@@ -50,8 +50,8 @@ def resolving(*script: Any, gaps: list[Gap] = GAPS) -> GraphSeam:
 
 async def open_card(seam: GraphSeam) -> str:
     """Put the decide_gaps card in the thread the way the gap merger does, and return its ID."""
-    from blueprint.gates import gate_message
-    from blueprint.graph import decide_gaps_args
+    from blueprint.graph.gates import gate_message
+    from blueprint.review.resolution import decide_gaps_args
 
     await seam._ensure_session("session-1")
     message, call = gate_message("decide_gaps", decide_gaps_args(GAPS), "2 gaps")

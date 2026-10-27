@@ -1,0 +1,28 @@
+.alert {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  margin: 0 9px 6px 3px;
+  padding: 10px 16px;
+}
+
+.message {
+  margin: 0;
+}
+
+.flag {
+  background: var(--crit-fill);
+  box-shadow: var(--frame-tag);
+  color: var(--on-status);
+  font-family: var(--font-label);
+  font-size: var(--label-size);
+  margin-right: 6px;
+  padding: 1px 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

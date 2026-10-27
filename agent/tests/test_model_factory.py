@@ -7,8 +7,8 @@ import openai
 from conftest import INTERVIEW_KEY, REVIEW_KEY
 
 import blueprint
-from blueprint.models import build_models
-from blueprint.settings import load_settings
+from blueprint.config.settings import load_settings
+from blueprint.llm.clients import build_models
 
 PROVIDER_MODULES = ("openai", "anthropic", "langchain_openai", "langchain_anthropic")
 SOURCE = Path(blueprint.__file__).parent
@@ -27,11 +27,11 @@ def _imports(path: Path) -> set[str]:
 
 def test_only_the_factory_imports_a_provider_sdk() -> None:
     importers = {
-        path.name
+        path.relative_to(SOURCE).as_posix()
         for path in SOURCE.rglob("*.py")
         if any(n.split(".")[0] in PROVIDER_MODULES for n in _imports(path))
     }
-    assert importers == {"models.py"}
+    assert importers == {"llm/clients.py"}
 
 
 def test_factory_builds_both_roles_from_their_own_variables(env: dict[str, str]) -> None:

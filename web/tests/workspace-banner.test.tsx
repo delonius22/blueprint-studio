@@ -2,7 +2,7 @@
 // T-10: the persistent same-model warning (SPECS S6.6, S11.6).
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { ReviewModelWarning } from "../components/ReviewModelWarning";
+import { ReviewModelWarning } from "../components/workspace/ReviewModelWarning";
 
 afterEach(cleanup);
 

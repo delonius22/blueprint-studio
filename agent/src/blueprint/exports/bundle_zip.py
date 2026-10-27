@@ -4,8 +4,8 @@ name, in the fixed kind order, every entry dated tickets_approved_at."""
 import io
 import zipfile
 
+from blueprint.domain.state import SessionState
 from blueprint.exports.docx_util import parse_time
-from blueprint.state import SessionState
 
 Entry = tuple[str, bytes]
 

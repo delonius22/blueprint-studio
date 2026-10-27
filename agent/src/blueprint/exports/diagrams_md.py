@@ -1,7 +1,7 @@
 """Diagrams.md: every diagram of the design as Mermaid, ready to render (SPECS S11.3)."""
 
-from blueprint.diagrams import markdown
-from blueprint.state import SessionState
+from blueprint.domain.state import SessionState
+from blueprint.exports.diagrams import markdown
 
 INTRO = (
     "Mermaid diagrams of the design: the architecture, the data model and one sequence "
