@@ -1,0 +1,202 @@
+{
+  "title": "Alert Pivot Chain",
+  "description": "Filter an alert by IP or user agent, then walk results through chained pivots.",
+  "inputs": {
+    "input_time": {
+      "type": "input.timerange",
+      "title": "Time range",
+      "options": {
+        "token": "global_time",
+        "defaultValue": "-24h@h,now"
+      }
+    },
+    "input_ip": {
+      "type": "input.text",
+      "title": "IP(s)",
+      "options": {
+        "token": "ip_list",
+        "defaultValue": "*"
+      }
+    },
+    "input_ua": {
+      "type": "input.text",
+      "title": "User agent(s)",
+      "options": {
+        "token": "ua_list",
+        "defaultValue": "*"
+      }
+    }
+  },
+  "defaults": {
+    "dataSources": {
+      "ds.search": {
+        "options": {
+          "queryParameters": {
+            "earliest": "$global_time.earliest$",
+            "latest": "$global_time.latest$"
+          }
+        }
+      }
+    }
+  },
+  "visualizations": {
+    "viz_help": {
+      "type": "splunk.markdown",
+      "options": {
+        "markdown": "**IPs:** comma-separated, CIDR and `*` ok. **User agents:** separate with `|` (UA strings contain commas), wildcards ok. Leave either as `*` to skip it. Each stage feeds the next; a stage with no results passes a no-match sentinel downstream."
+      }
+    },
+    "viz_s1": {
+      "type": "splunk.table",
+      "title": "Stage 1 \u2014 Alert hits ($ds_s1:job.resultCount$)",
+      "dataSources": {
+        "primary": "ds_s1"
+      }
+    },
+    "viz_s2": {
+      "type": "splunk.table",
+      "title": "Stage 2 \u2014 Network activity for Stage 1 IPs ($ds_s2:job.resultCount$)",
+      "dataSources": {
+        "primary": "ds_s2"
+      }
+    },
+    "viz_s3": {
+      "type": "splunk.table",
+      "title": "Stage 3 \u2014 Auth activity for Stage 2 users ($ds_s3:job.resultCount$)",
+      "dataSources": {
+        "primary": "ds_s3"
+      }
+    },
+    "viz_s4": {
+      "type": "splunk.table",
+      "title": "Stage 4 \u2014 Endpoint activity for Stage 3 users ($ds_s4:job.resultCount$)",
+      "dataSources": {
+        "primary": "ds_s4"
+      }
+    }
+  },
+  "dataSources": {
+    "ds_s1": {
+      "type": "ds.search",
+      "name": "ds_s1",
+      "options": {
+        "query": "index=REPLACE_ME sourcetype=REPLACE_ME [| makeresults | eval src_ip=split(replace($ip_list|s$, \"\\s+\", \"\"), \",\") | mvexpand src_ip | where src_ip!=\"\" | table src_ip] [| makeresults | eval http_user_agent=split($ua_list|s$, \"|\") | mvexpand http_user_agent | eval http_user_agent=trim(http_user_agent) | where http_user_agent!=\"\" | table http_user_agent]\n| REPLACE_WITH_REST_OF_YOUR_ALERT_PIPELINE\n| stats count min(_time) as first_seen max(_time) as last_seen values(user) as user values(dest) as dest by src_ip http_user_agent\n| convert ctime(first_seen) ctime(last_seen)",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s1_out": {
+      "type": "ds.chain",
+      "name": "ds_s1_out",
+      "options": {
+        "extend": "ds_s1",
+        "query": "| stats count values(src_ip) as v\n| eval handoff=if(count=0 OR isnull(v), \"src_ip=\\\"__NO_UPSTREAM_RESULTS__\\\"\", \"src_ip IN (\\\"\" . mvjoin(v, \"\\\",\\\"\") . \"\\\")\")\n| table handoff",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s2": {
+      "type": "ds.search",
+      "name": "ds_s2",
+      "options": {
+        "query": "index=REPLACE_ME_STAGE2 $ds_s1_out:result.handoff$\n| stats count values(dest_port) as dest_port values(user) as user by src_ip dest",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s2_out": {
+      "type": "ds.chain",
+      "name": "ds_s2_out",
+      "options": {
+        "extend": "ds_s2",
+        "query": "| stats count values(user) as v\n| eval handoff=if(count=0 OR isnull(v), \"user=\\\"__NO_UPSTREAM_RESULTS__\\\"\", \"user IN (\\\"\" . mvjoin(v, \"\\\",\\\"\") . \"\\\")\")\n| table handoff",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s3": {
+      "type": "ds.search",
+      "name": "ds_s3",
+      "options": {
+        "query": "index=REPLACE_ME_STAGE3 $ds_s2_out:result.handoff$\n| stats count(eval(action=\"failure\")) as failures count(eval(action=\"success\")) as successes values(src) as src values(dest) as dest by user",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s3_out": {
+      "type": "ds.chain",
+      "name": "ds_s3_out",
+      "options": {
+        "extend": "ds_s3",
+        "query": "| stats count values(user) as v\n| eval handoff=if(count=0 OR isnull(v), \"user=\\\"__NO_UPSTREAM_RESULTS__\\\"\", \"user IN (\\\"\" . mvjoin(v, \"\\\",\\\"\") . \"\\\")\")\n| table handoff",
+        "enableSmartSources": true
+      }
+    },
+    "ds_s4": {
+      "type": "ds.search",
+      "name": "ds_s4",
+      "options": {
+        "query": "index=REPLACE_ME_STAGE4 $ds_s3_out:result.handoff$\n| stats count values(process_name) as process_name values(dest) as host latest(_time) as last_seen by user\n| convert ctime(last_seen)",
+        "enableSmartSources": true
+      }
+    }
+  },
+  "layout": {
+    "type": "grid",
+    "options": {
+      "width": 1440
+    },
+    "structure": [
+      {
+        "item": "viz_help",
+        "type": "block",
+        "position": {
+          "x": 0,
+          "y": 0,
+          "w": 1440,
+          "h": 60
+        }
+      },
+      {
+        "item": "viz_s1",
+        "type": "block",
+        "position": {
+          "x": 0,
+          "y": 60,
+          "w": 1440,
+          "h": 320
+        }
+      },
+      {
+        "item": "viz_s2",
+        "type": "block",
+        "position": {
+          "x": 0,
+          "y": 380,
+          "w": 1440,
+          "h": 320
+        }
+      },
+      {
+        "item": "viz_s3",
+        "type": "block",
+        "position": {
+          "x": 0,
+          "y": 700,
+          "w": 1440,
+          "h": 320
+        }
+      },
+      {
+        "item": "viz_s4",
+        "type": "block",
+        "position": {
+          "x": 0,
+          "y": 1020,
+          "w": 1440,
+          "h": 320
+        }
+      }
+    ],
+    "globalInputs": [
+      "input_time",
+      "input_ip",
+      "input_ua"
+    ]
+  }
+}
